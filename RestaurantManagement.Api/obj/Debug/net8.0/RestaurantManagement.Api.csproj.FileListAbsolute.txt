@@ -133,3 +133,4 @@ D:\Projects\Restaurant Management System\RestaurantManagement.Api\obj\Debug\net8
 D:\Projects\Restaurant Management System\RestaurantManagement.Api\obj\Debug\net8.0\RestaurantManagement.Api.pdb
 D:\Projects\Restaurant Management System\RestaurantManagement.Api\obj\Debug\net8.0\RestaurantManagement.Api.genruntimeconfig.cache
 D:\Projects\Restaurant Management System\RestaurantManagement.Api\obj\Debug\net8.0\ref\RestaurantManagement.Api.dll
+D:\Projects\Restaurant Management System\RestaurantManagement.Api\obj\Debug\net8.0\RestaurantManagement.Api.sourcelink.json
