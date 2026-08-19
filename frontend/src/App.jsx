@@ -33,7 +33,6 @@ function getNavItems(role) {
   if (role === 'RestaurantOwner') {
     return [
       { label: 'Dashboard', path: '/owner/dashboard', icon: '▣' },
-      { label: 'My Restaurant', path: '/owner/restaurant', icon: '⌂' },
       { label: 'Categories', path: '/owner/categories', icon: '☰' },
       { label: 'Menu', path: '/owner/menu', icon: '☼' },
       { label: 'Orders', path: '/owner/orders', icon: '◫' },
