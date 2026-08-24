@@ -9,7 +9,7 @@ html {
 body {
   margin: 0;
   font-family: Inter, "Segoe UI", sans-serif;
-  background: #f5f3ef;
+  background: #ffffff;
   color: #1f2937;
 }
 
@@ -28,32 +28,7 @@ a {
   position: relative;
   min-height: 100vh;
   overflow: hidden;
-  background:
-    radial-gradient(circle at top left, rgba(245, 158, 11, 0.18), transparent 30%),
-    linear-gradient(135deg, #fffaf5 0%, #f5f3ef 42%, #f9fafb 100%);
-}
-
-.auth-glow {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(50px);
-  opacity: 0.6;
-}
-
-.auth-glow-one {
-  width: 260px;
-  height: 260px;
-  background: rgba(245, 158, 11, 0.22);
-  top: 8%;
-  left: 10%;
-}
-
-.auth-glow-two {
-  width: 340px;
-  height: 340px;
-  background: rgba(190, 24, 93, 0.12);
-  right: 6%;
-  bottom: 8%;
+  background: #ffffff;
 }
 
 .auth-screen {
@@ -67,87 +42,30 @@ a {
 }
 
 .app-shell {
-  display: grid;
-  grid-template-columns: 250px minmax(0, 1fr);
   min-height: 100vh;
-  background: #f5f3ef;
+  background: #ffffff;
 }
 
 .sidebar {
+  position: fixed;
+  inset: 0 auto 0 0;
+  z-index: 10;
   display: flex;
   flex-direction: column;
   background: #171717;
   color: #f3f4f6;
   border-right: 1px solid rgba(255, 255, 255, 0.08);
-  transition: width 0.25s ease, padding 0.25s ease;
   overflow: hidden;
   width: 250px;
 }
 
-.sidebar.collapsed {
-  width: 100px;
-}
-
-.sidebar-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 20px 16px 18px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.brand-mark {
-  display: grid;
-  place-items: center;
-  width: 50px;
-  height: 38px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-  color: #1f2937;
-  font-weight: 900;
-  letter-spacing: 0.06em;
-}
-
-.brand-copy {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  transition: opacity 0.2s ease;
-}
-
-.sidebar.collapsed .brand-copy,
-.sidebar.collapsed .sidebar-label,
-.sidebar.collapsed .user-meta,
-.sidebar.collapsed .logout-button {
-  opacity: 0;
-  pointer-events: none;
-  width: 0;
-  overflow: hidden;
-}
-
-.brand-copy span {
-  font-size: 0.7rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  opacity: 0.7;
-}
-
-.brand-copy strong {
-  font-size: 1rem;
-}
-
-.sidebar-toggle {
-  margin-left: auto;
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.04);
-  color: #f3f4f6;
-  cursor: pointer;
-  display: grid;
-  place-items: center;
-  padding: 0;
+.sidebar-heading {
+  margin: 0;
+  padding: 22px 16px 14px;
+  color: #ffffff;
+  font-size: 1.05rem;
+  line-height: 1.3;
+  letter-spacing: 0;
 }
 
 .sidebar-nav {
@@ -208,17 +126,6 @@ a {
   margin-bottom: 12px;
 }
 
-.user-avatar {
-  display: grid;
-  place-items: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
-  color: #111827;
-  font-weight: 800;
-}
-
 .user-meta {
   display: flex;
   flex-direction: column;
@@ -246,6 +153,7 @@ a {
 
 .main-panel {
   min-width: 0;
+  margin-left: 250px;
 }
 
 .topbar {
@@ -254,9 +162,8 @@ a {
   align-items: center;
   gap: 16px;
   padding: 18px 24px 14px;
-  background: rgba(255, 255, 255, 0.65);
+  background: #ffffff;
   border-bottom: 1px solid rgba(15, 23, 42, 0.06);
-  backdrop-filter: blur(10px);
 }
 
 .topbar-label {
@@ -305,7 +212,7 @@ a {
 }
 
 .hero-banner {
-  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  background: #ffffff;
   border: 1px solid #ece7e1;
   border-radius: 20px;
   padding: 28px 30px;
@@ -390,16 +297,26 @@ a {
 }
 
 .auth-card {
-  width: min(100%, 460px);
+  /* width: min(100%, 460px); */
+  width: auto;
   padding: 26px 24px 24px;
   border: 1px solid rgba(15, 23, 42, 0.06);
-  background: rgba(255, 255, 255, 0.88);
-  backdrop-filter: blur(10px);
+  background: #ffffff;
   box-shadow: 0 28px 55px rgba(15, 23, 42, 0.12);
 }
 
 .auth-card-header {
   margin-bottom: 6px;
+}
+
+.auth-card-header h1 {
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.8px;
+  text-align: center;
+  white-space: nowrap;
+  margin: 0 0 20px;
 }
 
 .auth-card-header h2 {
@@ -489,14 +406,15 @@ button:hover {
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 14px;
+  gap: 18px;
+  padding: 18px 0;
 }
 
 .stat-card {
-  background: linear-gradient(180deg, #ffffff 0%, #fafaf9 100%);
-  border: 1px solid #ece7e1;
+  background: #ffffff;
+  border: 1px solid #000000;
   border-radius: 14px;
-  padding: 18px 16px;
+  padding: 10px 16px;
   box-shadow: 0 8px 18px rgba(15, 23, 42, 0.03);
 }
 
@@ -550,6 +468,24 @@ button:hover {
 .menu-card .price {
   color: #111827;
   font-weight: 800;
+}
+
+.menu-filter-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.menu-filter-row label {
+  margin-top: 0;
+  white-space: nowrap;
+}
+
+.menu-filter-row select {
+  width: auto;
+  min-width: 140px;
+  margin-top: 0;
 }
 
 .owner-card {
@@ -644,9 +580,28 @@ button:hover {
   flex-direction: column;
   gap: 12px;
   padding: 16px;
-  border: 1px solid #eef2f7;
+  border: 2.5px solid #b2bdca;
   border-radius: 12px;
   background: #fff;
+}
+
+.order-details-button {
+  align-self: flex-start;
+}
+
+.order-details {
+  padding-top: 4px;
+  border-top: 1px solid #f0f2f5;
+}
+
+.order-detail-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0 4px;
+  color: #475569;
+  font-size: 0.9rem;
 }
 
 .order-card-top,
@@ -708,38 +663,15 @@ ul {
 }
 
 @media (max-width: 980px) {
-  .app-shell {
-    grid-template-columns: 1fr;
-  }
-
   .sidebar {
-    width: 100%;
-    border-right: none;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  }
-
-  .sidebar.collapsed {
-    width: 100%;
+    width: 220px;
   }
 
   .sidebar-nav {
-    flex-direction: row;
-    flex-wrap: wrap;
+    gap: 4px;
   }
 
-  .sidebar-link {
-    flex: 1 1 150px;
-  }
-
-  .sidebar.collapsed .brand-copy,
-  .sidebar.collapsed .sidebar-label,
-  .sidebar.collapsed .user-meta,
-  .sidebar.collapsed .logout-button {
-    opacity: 1;
-    pointer-events: auto;
-    width: auto;
-    overflow: visible;
-  }
+  .main-panel { margin-left: 220px; }
 }
 
 @media (max-width: 760px) {
@@ -752,6 +684,10 @@ ul {
   .content-area {
     padding: 16px 14px 28px;
   }
+
+  .sidebar { width: 190px; }
+
+  .main-panel { margin-left: 190px; }
 
   .hero-banner {
     padding: 22px 18px;

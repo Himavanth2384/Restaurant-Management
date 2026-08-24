@@ -1,3 +1,10 @@
+export async function fetchCustomerProfile() {
+  return request('/profile');
+}
+
+export async function updateCustomerProfile(payload) {
+  return request('/profile', { method: 'PUT', body: JSON.stringify(payload) });
+}
 const API_BASE_URL = 'http://localhost:5277/api';
 
 async function request(path, options = {}) {
@@ -45,12 +52,47 @@ export async function fetchRestaurants(status) {
   return request(`/admin/restaurants${query}`);
 }
 
+export async function fetchAdminUsers() {
+  return request('/admin/users');
+}
+
+export async function fetchAdminOrders() {
+  return request('/admin/orders');
+}
+
+export async function fetchAdminProfile() {
+  return request('/admin/profile');
+}
+
+export async function updateAdminProfile(payload) {
+  return request('/admin/profile', { method: 'PUT', body: JSON.stringify(payload) });
+}
+
+export async function updateAdminRestaurantVisibility(restaurantId, isVisible) {
+  return request(`/admin/restaurants/${restaurantId}/visibility`, {
+    method: 'PUT',
+    body: JSON.stringify({ isVisible })
+  });
+}
+
+export async function deleteAdminUser(userId) {
+  return request(`/admin/users/${userId}`, { method: 'DELETE' });
+}
+
 export async function fetchOwnerDashboard() {
   return request('/owner/dashboard');
 }
 
 export async function fetchOwnerRestaurant() {
   return request('/owner/restaurant');
+}
+
+export async function fetchOwnerProfile() {
+  return request('/owner/profile');
+}
+
+export async function updateOwnerProfile(payload) {
+  return request('/owner/profile', { method: 'PUT', body: JSON.stringify(payload) });
 }
 
 export async function updateOwnerRestaurant(payload) {
@@ -123,7 +165,8 @@ export async function fetchMenuSearch(search, foodType) {
 }
 
 export async function fetchCart() {
-  return request('/cart');
+  const data = await request('/cart');
+  return { ...data, items: data?.items || data?.cartItems || [] };
 }
 
 export async function addCartItem(payload) {
@@ -134,10 +177,18 @@ export async function removeCartItem(itemId) {
   return request(`/cart/${itemId}`, { method: 'DELETE' });
 }
 
+export async function updateCartItem(itemId, quantity) {
+  return request(`/cart/${itemId}`, { method: 'PUT', body: JSON.stringify({ quantity }) });
+}
+
 export async function placeOrder(payload) {
   return request('/orders', { method: 'POST', body: JSON.stringify(payload) });
 }
 
 export async function fetchOrders() {
   return request('/orders');
+}
+
+export async function fetchOrderDetail(orderId) {
+  return request(`/orders/${orderId}`);
 }

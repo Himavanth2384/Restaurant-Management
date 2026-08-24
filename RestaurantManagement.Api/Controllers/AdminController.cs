@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using RestaurantManagement.Api.Data;
+using RestaurantManagement.Api.DTOs;
+using RestaurantManagement.Api.Helpers;
 using RestaurantManagement.Api.Models;
 
 namespace RestaurantManagement.Api.Controllers;
@@ -47,6 +49,16 @@ public class AdminController : ControllerBase
         return Ok(restaurants);
     }
 
+    [HttpPut("restaurants/{id}/visibility")]
+    public async Task<IActionResult> UpdateRestaurantVisibility(int id, [FromBody] UpdateRestaurantVisibilityRequest request)
+    {
+        var restaurant = await _context.Restaurants.FindAsync(id);
+        if (restaurant == null) return NotFound();
+        restaurant.IsActive = request.IsVisible;
+        await _context.SaveChangesAsync();
+        return Ok(restaurant);
+    }
+
     [HttpGet("restaurants/{id}")]
     public async Task<IActionResult> GetRestaurant(int id)
     {
@@ -77,10 +89,58 @@ public class AdminController : ControllerBase
     [HttpGet("users")]
     public async Task<IActionResult> GetUsers([FromQuery] string? search)
     {
-        var query = _context.Users.AsQueryable();
+        var query = _context.Users.Include(u => u.Restaurants).AsQueryable();
         if (!string.IsNullOrWhiteSpace(search)) query = query.Where(u => u.Name.Contains(search) || u.Email.Contains(search));
         var users = await query.OrderByDescending(u => u.CreatedAt).ToListAsync();
-        return Ok(users);
+        var userDetails = users.Select(u => new
+        {
+            u.Id, u.Name, u.Email, u.Phone, u.Address, u.Role, u.IsActive, u.CreatedAt,
+            restaurants = u.Restaurants.Select(r => new { r.Id, r.Name, r.IsActive, r.Status }).ToList()
+        });
+        return Ok(userDetails);
+    }
+
+    [HttpGet("profile")]
+    public async Task<IActionResult> GetProfile()
+    {
+        var adminId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "0");
+        var admin = await _context.Users.FindAsync(adminId);
+        return admin == null ? NotFound() : Ok(new { admin.Id, admin.Name, admin.Email, admin.Phone, admin.Address });
+    }
+
+    [HttpPut("profile")]
+    public async Task<IActionResult> UpdateProfile([FromBody] UpdateAdminProfileRequest request)
+    {
+        var adminId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "0");
+        var admin = await _context.Users.FindAsync(adminId);
+        if (admin == null) return NotFound();
+        if (string.IsNullOrWhiteSpace(request.Email)) return BadRequest(new { message = "Email is required." });
+        if (await _context.Users.AnyAsync(u => u.Email == request.Email && u.Id != adminId)) return BadRequest(new { message = "Email is already in use." });
+
+        admin.Email = request.Email;
+        if (!string.IsNullOrWhiteSpace(request.Password)) admin.PasswordHash = PasswordHelper.HashPassword(request.Password);
+        await _context.SaveChangesAsync();
+        return Ok(new { admin.Id, admin.Name, admin.Email, admin.Phone, admin.Address });
+    }
+
+    [HttpDelete("users/{id}")]
+    public async Task<IActionResult> DeleteUser(int id)
+    {
+        var user = await _context.Users.FindAsync(id);
+        if (user == null) return NotFound();
+        if (user.Role == "SuperAdmin") return BadRequest(new { message = "The administrator cannot be deleted." });
+        var orders = await _context.Orders.Where(o => o.UserId == id).ToListAsync();
+        var orderIds = orders.Select(o => o.Id).ToList();
+        var carts = await _context.Carts.Where(c => c.UserId == id).ToListAsync();
+        var cartIds = carts.Select(c => c.Id).ToList();
+        _context.Payments.RemoveRange(await _context.Payments.Where(p => orderIds.Contains(p.OrderId)).ToListAsync());
+        _context.OrderItems.RemoveRange(await _context.OrderItems.Where(i => orderIds.Contains(i.OrderId)).ToListAsync());
+        _context.Orders.RemoveRange(orders);
+        _context.CartItems.RemoveRange(await _context.CartItems.Where(i => cartIds.Contains(i.CartId)).ToListAsync());
+        _context.Carts.RemoveRange(carts);
+        _context.Users.Remove(user);
+        await _context.SaveChangesAsync();
+        return Ok(new { message = "User deleted." });
     }
 
     [HttpPost("users/{id}/toggle")]
@@ -99,7 +159,12 @@ public class AdminController : ControllerBase
         var query = _context.Orders.Include(o => o.User).Include(o => o.Restaurant).AsQueryable();
         if (!string.IsNullOrWhiteSpace(status)) query = query.Where(o => o.Status == status);
         if (restaurantId.HasValue) query = query.Where(o => o.RestaurantId == restaurantId.Value);
-        var orders = await query.OrderByDescending(o => o.CreatedAt).ToListAsync();
+        var orders = await query.OrderByDescending(o => o.CreatedAt).Select(o => new
+        {
+            o.Id, o.TotalAmount, o.DeliveryAddress, o.Status, o.CreatedAt,
+            customer = new { o.User!.Id, o.User.Name, o.User.Email },
+            restaurant = new { o.Restaurant!.Id, o.Restaurant.Name }
+        }).ToListAsync();
         return Ok(orders);
     }
 

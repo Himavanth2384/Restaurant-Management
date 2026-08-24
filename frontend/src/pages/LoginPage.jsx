@@ -26,6 +26,7 @@ export default function LoginPage() {
       const data = await loginUser(form.email, form.password);
       localStorage.setItem('token', data.token);
       localStorage.setItem('role', data.role);
+      localStorage.setItem('userName', data.name);
       window.dispatchEvent(new Event('auth:change'));
 
       if (data.role === 'SuperAdmin') navigate('/admin/dashboard', { replace: true });
@@ -40,6 +41,7 @@ export default function LoginPage() {
     <div className="page auth-shell">
       <div className="card form-card auth-card">
         <div className="auth-card-header">
+          <h1>Restaurant Management System</h1>
           <span className="badge">Welcome back</span>
           <h2>Sign in</h2>
         </div>

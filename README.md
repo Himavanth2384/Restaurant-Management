@@ -1,13 +1,14 @@
-cd "d:\Projects\Restaurant Management System\frontend"
-npm run dev# Restaurant Management System
+# Restaurant Management System
 
-A simple full-stack restaurant management app built with ASP.NET Core Web API, Entity Framework Core with SQLite, and React.
+A full-stack restaurant management app built with ASP.NET Core Web API, Entity Framework Core with SQLite, and React.
 
 ## Features
 - JWT authentication and role-based access
 - Super admin dashboard and restaurant approval flow
-- Restaurant owner dashboard, category, menu, and order management
-- Customer browsing, cart, ordering, and order history
+- Restaurant owner dashboard, account settings, restaurant profile, categories, menu, and order management
+- Customer restaurant browsing with Veg/Non-Veg menu filtering
+- Customer cart, ordering, payment method selection, and order history
+- Expandable order details for customers and restaurant owners
 
 ## Roles
 - SuperAdmin
@@ -15,9 +16,10 @@ A simple full-stack restaurant management app built with ASP.NET Core Web API, E
 - User
 
 ## Default login
-- Super admin: admin@example.com / Admin@123
-- Restaurant owner: owner1@example.com / Owner@123
-- Customer: user@example.com / User@123
+- Super admin: admin@gmail.com / Admin@123
+- Restaurant owner1: owner1@gmail.com / Owner@123
+- Restaurant owner2: owner2@gmail.com / Owner@123
+- Customer: user@gmail.com / User@123
 
 ## Backend
 Run from the API folder:
@@ -26,7 +28,7 @@ Run from the API folder:
 dotnet run
 ```
 
-The API will run at http://localhost:5200.
+The API will run at http://localhost:5277.
 
 ## Frontend
 Run from the frontend folder:
@@ -36,6 +38,11 @@ npm run dev
 ```
 
 The Vite app will run at http://localhost:5173.
+
+## Main routes
+- Customer: `/restaurants`, `/cart`, `/orders`, `/settings`
+- Restaurant owner: `/owner/dashboard`, `/owner/categories`, `/owner/menu`, `/owner/orders`, `/owner/restaurant`, `/owner/settings`
+- Super admin: `/admin/dashboard`
 
 ## Project structure
 - RestaurantManagement.Api: ASP.NET Core backend

@@ -1,27 +1,31 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
-import { addCartItem, fetchCart, fetchCustomerRestaurants, fetchMenuSearch, fetchRestaurantDetail, placeOrder, removeCartItem } from '../services/api';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { addCartItem, fetchCart, fetchCustomerRestaurants, fetchOrders, fetchRestaurantDetail, placeOrder, removeCartItem } from '../services/api';
+import { updateCartItem } from '../services/api';
 
-export default function CustomerRestaurantsPage() {
+export default function CustomerDashboard() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { restaurantId } = useParams();
   const [restaurants, setRestaurants] = useState([]);
-  const [items, setItems] = useState([]);
   const [cart, setCart] = useState({ items: [] });
+  const [orders, setOrders] = useState([]);
   const [selectedRestaurant, setSelectedRestaurant] = useState(null);
+  const [foodTypeFilter, setFoodTypeFilter] = useState('All');
   const [search, setSearch] = useState('');
-  const [foodType, setFoodType] = useState('All');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [orderForm, setOrderForm] = useState({ deliveryAddress: '', paymentMethod: 'Cash on Delivery' });
 
   const selectedRestaurantId = useMemo(() => Number(restaurantId || 0), [restaurantId]);
+  const isCartPage = location.pathname === '/cart';
+  const section = location.hash.slice(1) || 'home';
 
   useEffect(() => {
     loadRestaurants();
-    loadMenu();
     loadCart();
-  }, []);
+    loadOrders();
+  }, [isCartPage]);
 
   useEffect(() => {
     if (selectedRestaurantId) {
@@ -31,20 +35,28 @@ export default function CustomerRestaurantsPage() {
     }
   }, [selectedRestaurantId]);
 
+  useEffect(() => {
+    const target = location.hash ? document.getElementById(location.hash.slice(1)) : null;
+    target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [location.hash]);
+
   async function loadRestaurants() {
     const data = await fetchCustomerRestaurants(search);
     setRestaurants(data);
   }
 
-  async function loadMenu() {
-    const data = await fetchMenuSearch(search, foodType);
-    setItems(data);
-  }
-
   async function loadCart() {
     try {
       const data = await fetchCart();
-      setCart(data || { items: [] });
+      setCart(data);
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  async function loadOrders() {
+    try {
+      setOrders(await fetchOrders());
     } catch (err) {
       setError(err.message);
     }
@@ -67,7 +79,7 @@ export default function CustomerRestaurantsPage() {
       const restaurantId = selectedRestaurant?.id || menuItem.restaurantId;
       await addCartItem({ restaurantId, menuItemId: menuItem.id, quantity: 1 });
       await loadCart();
-      setMessage('Item added to cart.');
+      setMessage(`${menuItem.name} added to cart.`);
       setError('');
     } catch (err) {
       setError(err.message);
@@ -78,6 +90,18 @@ export default function CustomerRestaurantsPage() {
   const handleRemoveCartItem = async (itemId) => {
     try {
       await removeCartItem(itemId);
+      await loadCart();
+      setMessage('Cart updated.');
+      setError('');
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const handleQuantityChange = async (itemId, quantity) => {
+    if (quantity < 1) return;
+    try {
+      await updateCartItem(itemId, quantity);
       await loadCart();
       setMessage('Cart updated.');
       setError('');
@@ -106,76 +130,83 @@ export default function CustomerRestaurantsPage() {
   };
 
   const filteredRestaurants = selectedRestaurant ? [selectedRestaurant] : restaurants;
+  const showRestaurants = !isCartPage && !selectedRestaurant;
+  const showMenu = !isCartPage && Boolean(selectedRestaurant);
+  const showHomeOrders = !isCartPage && !selectedRestaurant && section === 'home';
+  const totalCartItems = (cart.items || []).reduce((total, item) => total + item.quantity, 0);
+  const totalCartAmount = (cart.items || []).reduce((total, item) => total + item.quantity * item.price, 0);
+  const filteredMenuItems = selectedRestaurant?.menuItems?.filter((item) => foodTypeFilter === 'All' || item.foodType === foodTypeFilter) || [];
 
   return (
     <div className="page">
       <div className="page-header">
-        <h2>Restaurants</h2>
-        <span className="pill">Fresh picks</span>
+        <h2>{isCartPage ? 'Cart' : selectedRestaurant ? selectedRestaurant.name : section === 'home' ? 'Home' : 'Restaurants'}</h2>
       </div>
       {message && <p className="success">{message}</p>}
       {error && <p className="error">{error}</p>}
-      <div className="card owner-card">
+      {!isCartPage && !selectedRestaurant && <div className="card owner-card">
         <div className="search-row">
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search restaurants or food" />
-          <select value={foodType} onChange={(e) => setFoodType(e.target.value)}>
-            <option value="All">All</option>
-            <option value="Veg">Veg</option>
-            <option value="NonVeg">Non-Veg</option>
-          </select>
-          <button type="button" onClick={() => { loadRestaurants(); loadMenu(); }}>Search</button>
+          <button type="button" onClick={loadRestaurants}>Search</button>
         </div>
-      </div>
+      </div>}
 
-      <div className="stats-grid restaurant-grid">
+      {showRestaurants && <div className="stats-grid restaurant-grid" id="restaurants">
         {filteredRestaurants.map((restaurant) => (
           <button key={restaurant.id} type="button" className="card restaurant-card restaurant-click" onClick={() => navigate(`/restaurants/${restaurant.id}`)}>
             <h3>{restaurant.name}</h3>
             <p>{restaurant.description}</p>
-            <p>{restaurant.address}</p>
-            <span className="pill">{restaurant.status}</span>
+            <p>{'Location: ' +restaurant.address}</p>
+            <span className="pill">{restaurant.isActive ? 'Open' : 'Closed'}</span>
           </button>
         ))}
-      </div>
+      </div>}
 
-      {selectedRestaurant && (
+      {showHomeOrders && <div className="card owner-card">
+        <div className="page-header">
+          <h2>Recent orders</h2>
+          <Link to="/orders" className="topbar-action">View all</Link>
+        </div>
+        {orders.length === 0 ? <p className="empty-state">No orders yet.</p> : orders.slice(0, 3).map((order) => (
+          <div className="list-row" key={order.id}>
+            <div><strong>Order #{order.id}</strong><small>{order.restaurant?.name || 'Restaurant'} · {new Date(order.createdAt).toLocaleString()}</small></div>
+            <span className="pill">{order.status}</span>
+            <strong>₹{order.totalAmount}</strong>
+          </div>
+        ))}
+      </div>}
+
+      {showMenu && (
         <div className="restaurant-detail card">
           <div className="page-header">
             <h2>{selectedRestaurant.name}</h2>
-            <Link to="/restaurants" className="topbar-action">Back to all</Link>
+            <Link to="/restaurants" className="topbar-action">Back</Link>
           </div>
           <p>{selectedRestaurant.description}</p>
           <p>{selectedRestaurant.address}</p>
-          <div className="stats-grid menu-grid">
-            {selectedRestaurant.menuItems?.length ? selectedRestaurant.menuItems.map((item) => (
+          <div className="menu-filter-row">
+            <label htmlFor="food-type-filter">Filter menu</label>
+            <select id="food-type-filter" value={foodTypeFilter} onChange={(e) => setFoodTypeFilter(e.target.value)}>
+              <option value="All">All</option>
+              <option value="Veg">Veg</option>
+              <option value="NonVeg">Non-Veg</option>
+            </select>
+          </div>
+          <div className="stats-grid menu-grid" id="menu">
+            {filteredMenuItems.length ? filteredMenuItems.map((item) => (
               <div key={item.id} className="card menu-card">
                 <h3>{item.name}</h3>
                 <p>{item.description}</p>
                 <p className="price">₹{item.price}</p>
                 <span className="pill">{item.foodType}</span>
-                <button type="button" onClick={() => handleAddToCart(item)}>Add to cart</button>
+                <button type="button" disabled={!item.isAvailable} onClick={() => handleAddToCart(item)}>{item.isAvailable ? 'Add to cart' : 'Unavailable'}</button>
               </div>
-            )) : <p className="empty-state">No menu items available for this restaurant.</p>}
+            )) : <p className="empty-state">No {foodTypeFilter === 'All' ? '' : `${foodTypeFilter === 'NonVeg' ? 'non-veg' : 'veg'} `}menu items available for this restaurant.</p>}
           </div>
         </div>
       )}
 
-      {!selectedRestaurant && (
-        <div className="stats-grid menu-grid">
-          {items.map((item) => (
-            <div key={item.id} className="card menu-card">
-              <h3>{item.name}</h3>
-              <p>{item.description}</p>
-              <p className="price">₹{item.price}</p>
-              <span className="pill">{item.foodType}</span>
-              <small>{item.restaurant?.name}</small>
-              <button type="button" onClick={() => handleAddToCart(item)}>Add to cart</button>
-            </div>
-          ))}
-        </div>
-      )}
-
-      <div className="card owner-card">
+      {(isCartPage || section === 'cart') && <div className="card owner-card" id="cart">
         <div className="page-header">
           <h2>Cart</h2>
           <span className="pill">{cart.items?.length || 0} items</span>
@@ -186,7 +217,11 @@ export default function CustomerRestaurantsPage() {
               <div key={item.id} className="list-row">
                 <div>
                   <strong>{item.menuItem?.name}</strong>
-                  <small>Qty: {item.quantity}</small>
+                  <div className="row-actions">
+                    <button type="button" onClick={() => handleQuantityChange(item.id, item.quantity - 1)} disabled={item.quantity <= 1}>-</button>
+                    <span>Qty: {item.quantity}</span>
+                    <button type="button" onClick={() => handleQuantityChange(item.id, item.quantity + 1)}>+</button>
+                  </div>
                 </div>
                 <div className="row-actions">
                   <span>₹{item.quantity * item.price}</span>
@@ -196,6 +231,11 @@ export default function CustomerRestaurantsPage() {
             ))}
           </div>
         )}
+
+        <div className="stats-grid cart-summary">
+          <div className="stat-card"><h3>Number of items</h3><p>{totalCartItems}</p></div>
+          <div className="stat-card"><h3>Total</h3><p>₹{totalCartAmount.toFixed(2)}</p></div>
+        </div>
 
         <div className="field-grid order-grid">
           <label>
@@ -212,7 +252,7 @@ export default function CustomerRestaurantsPage() {
           </label>
         </div>
         <button type="button" onClick={handlePlaceOrder}>Place order</button>
-      </div>
+      </div>}
     </div>
   );
 }

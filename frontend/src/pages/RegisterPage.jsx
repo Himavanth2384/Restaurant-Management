@@ -15,6 +15,7 @@ export default function RegisterPage() {
       const data = await registerUser(form);
       localStorage.setItem('token', data.token);
       localStorage.setItem('role', data.role);
+      localStorage.setItem('userName', data.name);
       window.dispatchEvent(new Event('auth:change'));
       navigate('/restaurants', { replace: true });
     } catch (err) {

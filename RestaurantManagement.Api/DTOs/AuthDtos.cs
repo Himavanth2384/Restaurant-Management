@@ -22,3 +22,18 @@ public class AuthResponse
     public string Name { get; set; } = string.Empty;
     public int UserId { get; set; }
 }
+
+public class UpdateUserProfileRequest
+{
+    public string Name { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
+    public string Phone { get; set; } = string.Empty;
+    public string Address { get; set; } = string.Empty;
+    public string? Password { get; set; }
+}
+
+public class UpdateAdminProfileRequest
+{
+    public string Email { get; set; } = string.Empty;
+    public string? Password { get; set; }
+}

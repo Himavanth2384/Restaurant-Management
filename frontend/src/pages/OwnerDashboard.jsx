@@ -9,9 +9,11 @@ import {
   fetchOwnerDashboard,
   fetchOwnerMenu,
   fetchOwnerOrders,
+  fetchOwnerProfile,
   fetchOwnerRestaurant,
   updateOwnerMenuItem,
   updateOwnerOrderStatus,
+  updateOwnerProfile,
   updateOwnerRestaurant,
 } from '../services/api';
 
@@ -25,13 +27,16 @@ const emptyMenuForm = {
   isAvailable: true,
 };
 
-export default function OwnerDashboardPage() {
+export default function OwnerDashboard() {
   const location = useLocation();
   const [data, setData] = useState({});
   const [restaurant, setRestaurant] = useState(null);
   const [categories, setCategories] = useState([]);
   const [menuItems, setMenuItems] = useState([]);
+  const [editingMenuId, setEditingMenuId] = useState(null);
   const [orders, setOrders] = useState([]);
+  const [expandedOrderId, setExpandedOrderId] = useState(null);
+  const [profile, setProfile] = useState({ name: '', email: '', phone: '', address: '', password: '' });
   const [categoryName, setCategoryName] = useState('');
   const [menuForm, setMenuForm] = useState(emptyMenuForm);
   const [restaurantForm, setRestaurantForm] = useState({
@@ -58,12 +63,14 @@ export default function OwnerDashboardPage() {
         const categoryData = await fetchOwnerCategories();
         const menuData = await fetchOwnerMenu();
         const orderData = await fetchOwnerOrders();
+        const profileData = await fetchOwnerProfile();
 
         setData(dashboard);
         setRestaurant(restaurantData);
         setCategories(categoryData);
         setMenuItems(menuData);
         setOrders(orderData);
+        setProfile({ ...profileData, password: '' });
         setRestaurantForm({
           name: restaurantData.name || '',
           description: restaurantData.description || '',
@@ -95,6 +102,21 @@ export default function OwnerDashboardPage() {
     }
   };
 
+  const saveProfile = async (event) => {
+    event.preventDefault();
+    try {
+      const updated = await updateOwnerProfile({ ...profile, password: profile.password || null });
+      setProfile({ ...updated, password: '' });
+      localStorage.setItem('userName', updated.name);
+      window.dispatchEvent(new Event('auth:change'));
+      setMessage('Settings updated successfully.');
+      setError('');
+    } catch (err) {
+      setError(err.message);
+      setMessage('');
+    }
+  };
+
   const submitCategory = async (event) => {
     event.preventDefault();
     try {
@@ -123,19 +145,39 @@ export default function OwnerDashboardPage() {
   const submitMenuItem = async (event) => {
     event.preventDefault();
     try {
-      await createOwnerMenuItem({
+      const payload = {
         ...menuForm,
         price: Number(menuForm.price),
         categoryId: Number(menuForm.categoryId),
-      });
+      };
+      if (editingMenuId) {
+        await updateOwnerMenuItem(editingMenuId, payload);
+        setMessage('Menu item updated.');
+      } else {
+        await createOwnerMenuItem(payload);
+        setMessage('Menu item added.');
+      }
       setMenuForm(emptyMenuForm);
+      setEditingMenuId(null);
       const nextMenu = await fetchOwnerMenu();
       setMenuItems(nextMenu);
-      setMessage('Menu item added.');
       setError('');
     } catch (err) {
       setError(err.message);
     }
+  };
+
+  const editMenuItem = (item) => {
+    setEditingMenuId(item.id);
+    setMenuForm({
+      name: item.name || '',
+      description: item.description || '',
+      price: item.price || '',
+      foodType: item.foodType || 'Veg',
+      categoryId: item.categoryId || '',
+      imageUrl: item.imageUrl || '',
+      isAvailable: item.isAvailable ?? true,
+    });
   };
 
   const removeMenuItem = async (menuId) => {
@@ -160,6 +202,10 @@ export default function OwnerDashboardPage() {
     }
   };
 
+  const toggleOrderDetails = (orderId) => {
+    setExpandedOrderId((current) => current === orderId ? null : orderId);
+  };
+
   const renderDashboard = () => (
     <>
       <div className="page-header">
@@ -168,11 +214,11 @@ export default function OwnerDashboardPage() {
       </div>
       <div className="stats-grid">
         <div className="stat-card"><h3>Restaurant</h3><p>{data.restaurantName || '—'}</p></div>
+        <div className="stat-card"><h3>Menu Items</h3><p>{data.totalMenuItems ?? 0}</p></div>
         <div className="stat-card"><h3>Today's Orders</h3><p>{data.todaysOrders ?? 0}</p></div>
         <div className="stat-card"><h3>Pending Orders</h3><p>{data.pendingOrders ?? 0}</p></div>
         <div className="stat-card"><h3>Completed Orders</h3><p>{data.completedOrders ?? 0}</p></div>
         <div className="stat-card"><h3>Today's Sales</h3><p>₹{data.todaysSales ?? 0}</p></div>
-        <div className="stat-card"><h3>Menu Items</h3><p>{data.totalMenuItems ?? 0}</p></div>
       </div>
       <div className="card owner-card">
         <h3>Recent Orders</h3>
@@ -234,6 +280,25 @@ export default function OwnerDashboardPage() {
             Restaurant is active
           </label>
           <button type="submit">Save restaurant</button>
+        </form>
+      </div>
+    </div>
+  );
+
+  const renderSettings = () => (
+    <div className="page-header-column">
+      <div className="page-header">
+        <h2>Settings</h2>
+        <span className="pill">Account details</span>
+      </div>
+      <div className="card owner-card">
+        <form className="owner-form" onSubmit={saveProfile}>
+          <label>Name<input required value={profile.name} onChange={(event) => setProfile({ ...profile, name: event.target.value })} /></label>
+          <label>Email<input type="email" required value={profile.email} onChange={(event) => setProfile({ ...profile, email: event.target.value })} /></label>
+          <label>Phone<input value={profile.phone || ''} onChange={(event) => setProfile({ ...profile, phone: event.target.value })} /></label>
+          <label>Address<input value={profile.address || ''} onChange={(event) => setProfile({ ...profile, address: event.target.value })} /></label>
+          <label>New password<input type="password" placeholder="Leave blank to keep current password" value={profile.password} onChange={(event) => setProfile({ ...profile, password: event.target.value })} /></label>
+          <button type="submit">Save settings</button>
         </form>
       </div>
     </div>
@@ -304,11 +369,17 @@ export default function OwnerDashboardPage() {
               <input value={menuForm.imageUrl} onChange={(e) => setMenuForm({ ...menuForm, imageUrl: e.target.value })} />
             </label>
           </div>
-          <label className="checkbox-row">
-            <input type="checkbox" checked={menuForm.isAvailable} onChange={(e) => setMenuForm({ ...menuForm, isAvailable: e.target.checked })} />
-            Item is available
+          <label>
+            Availability
+            <select value={menuForm.isAvailable ? 'Yes' : 'No'} onChange={(e) => setMenuForm({ ...menuForm, isAvailable: e.target.value === 'Yes' })}>
+              <option value="Yes">Yes</option>
+              <option value="No">No</option>
+            </select>
           </label>
-          <button type="submit">Add menu item</button>
+          <div className="row-actions">
+            <button type="submit">{editingMenuId ? 'Save menu item' : 'Add menu item'}</button>
+            {editingMenuId && <button type="button" className="secondary-button" onClick={() => { setEditingMenuId(null); setMenuForm(emptyMenuForm); }}>Cancel</button>}
+          </div>
         </form>
         <div className="list-stack">
           {menuItems.length === 0 ? <p className="empty-state">No menu items added yet.</p> : menuItems.map((item) => (
@@ -316,11 +387,10 @@ export default function OwnerDashboardPage() {
               <div>
                 <strong>{item.name}</strong>
                 <small>{item.foodType} • ₹{item.price}</small>
+                <small>Availability: {item.isAvailable ? 'Yes' : 'No'}</small>
               </div>
               <div className="row-actions">
-                <button type="button" className="secondary-button" onClick={() => updateOwnerMenuItem(item.id, { isAvailable: !item.isAvailable }) .then(async () => {
-                  setMenuItems(await fetchOwnerMenu());
-                }).catch((err) => setError(err.message))}>Toggle</button>
+                <button type="button" className="secondary-button" onClick={() => editMenuItem(item)}>Edit</button>
                 <button type="button" className="danger-button" onClick={() => removeMenuItem(item.id)}>Delete</button>
               </div>
             </div>
@@ -343,7 +413,7 @@ export default function OwnerDashboardPage() {
               <div className="order-card-top">
                 <div>
                   <strong>Order #{order.id}</strong>
-                  <small>{order.deliveryAddress}</small>
+                  <small>{order.customer?.name || 'Customer'} · {order.deliveryAddress}</small>
                 </div>
                 <strong>₹{order.totalAmount}</strong>
               </div>
@@ -358,6 +428,39 @@ export default function OwnerDashboardPage() {
                   <option value="Cancelled">Cancelled</option>
                 </select>
               </div>
+              <button
+                type="button"
+                className="secondary-button order-details-button"
+                onClick={() => toggleOrderDetails(order.id)}
+                aria-expanded={expandedOrderId === order.id}
+              >
+                {expandedOrderId === order.id ? 'Hide details' : 'Show details'}
+              </button>
+              {expandedOrderId === order.id && (
+                <div className="order-details">
+                  <div className="order-detail-meta">
+                    <div>
+                      <strong>Customer details</strong>
+                      <small>{order.customer?.name || 'Not available'}</small>
+                      <small>{order.customer?.email || 'No email provided'}</small>
+                      <small>{order.customer?.phone || 'No phone provided'}</small>
+                    </div>
+                    <div>
+                      <strong>Delivery address</strong>
+                      <small>{order.deliveryAddress || 'Not provided'}</small>
+                    </div>
+                  </div>
+                  <div className="order-detail-meta">
+                    <span>Payment mode: {order.payment?.paymentMethod || 'Not available'}</span>
+                  </div>
+                  {order.items?.map((item) => (
+                    <div className="list-row" key={item.id}>
+                      <span>{item.foodName} x {item.quantity}</span>
+                      <strong>₹{item.subtotal}</strong>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -370,6 +473,7 @@ export default function OwnerDashboardPage() {
       {message && <p className="success">{message}</p>}
       {error && <p className="error">{error}</p>}
       {section === '/owner/restaurant' && renderRestaurant()}
+      {section === '/owner/settings' && renderSettings()}
       {section === '/owner/categories' && renderCategories()}
       {section === '/owner/menu' && renderMenu()}
       {section === '/owner/orders' && renderOrders()}

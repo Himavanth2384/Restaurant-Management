@@ -10,6 +10,13 @@ public static class SeedData
     {
         await context.Database.MigrateAsync();
 
+        var oldFoodCorner = await context.Restaurants.Where(r => r.Name == "Food Corner").ToListAsync();
+        if (oldFoodCorner.Count > 0)
+        {
+            context.Restaurants.RemoveRange(oldFoodCorner);
+            await context.SaveChangesAsync();
+        }
+
         if (await context.Users.AnyAsync()) return;
 
         var admin = new User
@@ -36,8 +43,7 @@ public static class SeedData
 
         var restaurantOne = new Restaurant { Name = "Spice Hub", Description = "North Indian specialties", Address = "Connaught Place", Phone = "1111111111", Email = "spice@gmail.com", OpeningTime = "10:00", ClosingTime = "22:00", OwnerId = ownerOne.Id, Status = "Approved", IsActive = true };
         var restaurantTwo = new Restaurant { Name = "Green Leaf", Description = "Healthy vegetarian meals", Address = "Koramangala", Phone = "2222222222", Email = "green@gmail.com", OpeningTime = "11:00", ClosingTime = "23:00", OwnerId = ownerTwo.Id, Status = "Approved", IsActive = true };
-        var restaurantThree = new Restaurant { Name = "Food Corner", Description = "Fast food and snacks", Address = "Andheri", Phone = "3333333333", Email = "food@gmail.com", OpeningTime = "09:00", ClosingTime = "21:00", OwnerId = ownerTwo.Id, Status = "Pending", IsActive = true };
-        context.Restaurants.AddRange(restaurantOne, restaurantTwo, restaurantThree);
+        context.Restaurants.AddRange(restaurantOne, restaurantTwo);
         await context.SaveChangesAsync();
 
         var starters = new Category { Name = "Starters", RestaurantId = restaurantOne.Id };

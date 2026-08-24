@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using RestaurantManagement.Api.Data;
 using RestaurantManagement.Api.DTOs;
+using RestaurantManagement.Api.Helpers;
 using RestaurantManagement.Api.Models;
 using System.Security.Claims;
 
@@ -54,6 +55,31 @@ public class OwnerController : ControllerBase
     {
         var restaurant = await GetOwnedRestaurantAsync();
         return restaurant == null ? NotFound() : Ok(restaurant);
+    }
+
+    [HttpGet("profile")]
+    public async Task<IActionResult> GetProfile()
+    {
+        var owner = await _context.Users.FindAsync(GetOwnerId());
+        return owner == null ? NotFound() : Ok(new { owner.Id, owner.Name, owner.Email, owner.Phone, owner.Address });
+    }
+
+    [HttpPut("profile")]
+    public async Task<IActionResult> UpdateProfile([FromBody] UpdateUserProfileRequest request)
+    {
+        var ownerId = GetOwnerId();
+        var owner = await _context.Users.FindAsync(ownerId);
+        if (owner == null) return NotFound();
+        if (string.IsNullOrWhiteSpace(request.Email)) return BadRequest(new { message = "Email is required." });
+        if (await _context.Users.AnyAsync(item => item.Email == request.Email && item.Id != ownerId)) return BadRequest(new { message = "Email is already in use." });
+
+        owner.Name = request.Name;
+        owner.Email = request.Email;
+        owner.Phone = request.Phone;
+        owner.Address = request.Address;
+        if (!string.IsNullOrWhiteSpace(request.Password)) owner.PasswordHash = PasswordHelper.HashPassword(request.Password);
+        await _context.SaveChangesAsync();
+        return Ok(new { owner.Id, owner.Name, owner.Email, owner.Phone, owner.Address });
     }
 
     [HttpPut("restaurant")]
@@ -180,8 +206,14 @@ public class OwnerController : ControllerBase
     {
         var restaurant = await GetOwnedRestaurantAsync();
         if (restaurant == null) return NotFound();
-        var orders = await _context.Orders.Where(o => o.RestaurantId == restaurant.Id).Include(o => o.User).OrderByDescending(o => o.CreatedAt).ToListAsync();
-        return Ok(orders);
+        var orders = await _context.Orders.Where(o => o.RestaurantId == restaurant.Id).OrderByDescending(o => o.CreatedAt).Select(o => new
+        {
+            o.Id, o.TotalAmount, o.DeliveryAddress, o.Status, o.CreatedAt,
+            customer = new { o.User!.Id, o.User.Name, o.User.Email, o.User.Phone, o.User.Address },
+            payment = o.Payments.OrderByDescending(item => item.CreatedAt).Select(item => new { item.PaymentMethod }).FirstOrDefault(),
+            items = o.OrderItems.Select(item => new { item.Id, item.FoodName, item.Quantity, item.Price, item.Subtotal }).ToList()
+        }).ToListAsync();
+        return Ok(orders); 
     }
 
     [HttpPut("orders/{id}/status")]
