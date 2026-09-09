@@ -16,13 +16,24 @@ async function request(path, options = {}) {
   };
 
   const response = await fetch(`${API_BASE_URL}${path}`, { ...options, headers });
-  const data = await response.json().catch(() => ({}));
+  const rawText = await response.text();
+  let data = {};
+
+  try {
+    data = rawText ? JSON.parse(rawText) : {};
+  } catch {
+    data = { message: rawText || 'Request failed' };
+  }
 
   if (!response.ok) {
-    throw new Error(data.message || 'Request failed');
+    throw new Error(data.message || data.title || 'Request failed');
   }
 
   return data;
+}
+
+function sortOrdersById(orders) {
+  return [...orders].sort((first, second) => Number(second.id) - Number(first.id));
 }
 
 export async function loginUser(email, password) {
@@ -47,6 +58,10 @@ export async function fetchDashboard() {
   return request('/admin/dashboard');
 }
 
+export async function fetchAdminAnalytics() {
+  return request('/admin/analytics');
+}
+
 export async function fetchRestaurants(status) {
   const query = status ? `?status=${status}` : '';
   return request(`/admin/restaurants${query}`);
@@ -57,7 +72,11 @@ export async function fetchAdminUsers() {
 }
 
 export async function fetchAdminOrders() {
-  return request('/admin/orders');
+  return request('/admin/orders').then(sortOrdersById);
+}
+
+export async function fetchAdminRestaurantMenu(restaurantId) {
+  return request(`/admin/restaurants/${restaurantId}/menu`);
 }
 
 export async function fetchAdminProfile() {
@@ -81,6 +100,10 @@ export async function deleteAdminUser(userId) {
 
 export async function fetchOwnerDashboard() {
   return request('/owner/dashboard');
+}
+
+export async function fetchOwnerAnalytics() {
+  return request('/owner/analytics');
 }
 
 export async function fetchOwnerRestaurant() {
@@ -140,7 +163,7 @@ export async function deleteOwnerMenuItem(menuId) {
 }
 
 export async function fetchOwnerOrders() {
-  return request('/owner/orders');
+  return request('/owner/orders').then(sortOrdersById);
 }
 
 export async function updateOwnerOrderStatus(orderId, status) {
@@ -186,7 +209,7 @@ export async function placeOrder(payload) {
 }
 
 export async function fetchOrders() {
-  return request('/orders');
+  return request('/orders').then(sortOrdersById);
 }
 
 export async function fetchOrderDetail(orderId) {

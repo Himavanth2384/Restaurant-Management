@@ -64,10 +64,10 @@ public class CustomerController : ControllerBase
             .Select(r => new
             {
                 r.Id, r.Name, r.Description, r.Address, r.Phone, r.Email,
-                r.OpeningTime, r.ClosingTime, r.ImageUrl, r.OwnerId, r.Status, r.IsActive, r.CreatedAt,
+                r.OpeningTime, r.ClosingTime, r.OwnerId, r.Status, r.IsActive, r.CreatedAt,
                 menuItems = r.MenuItems.Select(m => new
                 {
-                    m.Id, m.Name, m.Description, m.Price, m.FoodType, m.ImageUrl,
+                    m.Id, m.Name, m.Description, m.Price, m.FoodType,
                     m.IsAvailable, m.CategoryId, m.RestaurantId
                 }).ToList()
             })
@@ -216,7 +216,7 @@ public class CustomerController : ControllerBase
     public async Task<IActionResult> GetOrders()
     {
         var userId = GetUserId();
-        var orders = await _context.Orders.Where(o => o.UserId == userId).OrderByDescending(o => o.CreatedAt).Select(o => new
+        var orders = await _context.Orders.Where(o => o.UserId == userId).OrderByDescending(o => o.Id).Select(o => new
         {
             o.Id, o.TotalAmount, o.DeliveryAddress, o.Status, o.CreatedAt,
             restaurant = new { o.Restaurant!.Id, o.Restaurant.Name },

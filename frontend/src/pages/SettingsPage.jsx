@@ -7,6 +7,18 @@ export default function SettingsPage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
+    if (!message) return undefined;
+    const timer = setTimeout(() => setMessage(''), 5000);
+    return () => clearTimeout(timer);
+  }, [message]);
+
+  useEffect(() => {
+    if (!error) return undefined;
+    const timer = setTimeout(() => setError(''), 5000);
+    return () => clearTimeout(timer);
+  }, [error]);
+
+  useEffect(() => {
     fetchCustomerProfile()
       .then((data) => setProfile({ ...data, password: '' }))
       .catch((err) => setError(err.message));

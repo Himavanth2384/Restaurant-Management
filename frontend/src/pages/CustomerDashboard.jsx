@@ -36,6 +36,18 @@ export default function CustomerDashboard() {
   }, [selectedRestaurantId]);
 
   useEffect(() => {
+    if (!message) return undefined;
+    const timer = setTimeout(() => setMessage(''), 5000);
+    return () => clearTimeout(timer);
+  }, [message]);
+
+  useEffect(() => {
+    if (!error) return undefined;
+    const timer = setTimeout(() => setError(''), 5000);
+    return () => clearTimeout(timer);
+  }, [error]);
+
+  useEffect(() => {
     const target = location.hash ? document.getElementById(location.hash.slice(1)) : null;
     target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, [location.hash]);
@@ -154,10 +166,15 @@ export default function CustomerDashboard() {
       {showRestaurants && <div className="stats-grid restaurant-grid" id="restaurants">
         {filteredRestaurants.map((restaurant) => (
           <button key={restaurant.id} type="button" className="card restaurant-card restaurant-click" onClick={() => navigate(`/restaurants/${restaurant.id}`)}>
-            <h3>{restaurant.name}</h3>
-            <p>{restaurant.description}</p>
-            <p>{'Location: ' +restaurant.address}</p>
-            <span className="pill">{restaurant.isActive ? 'Open' : 'Closed'}</span>
+            <div className="restaurant-card-top">
+              <h3>{restaurant.name}</h3>
+              <span className={`restaurant-status ${restaurant.isActive ? 'open' : 'closed'}`}>
+                {restaurant.isActive ? 'Open' : 'Closed'}
+              </span>
+            </div>
+            <p className="restaurant-description">{restaurant.description || 'Discover delicious dishes and refreshing drinks.'}</p>
+            <p className="restaurant-location"><span aria-hidden="true">Location</span>{restaurant.address || 'Address not available'}</p>
+            <span className="restaurant-card-link">View menu <span aria-hidden="true">-&gt;</span></span>
           </button>
         ))}
       </div>}
@@ -167,13 +184,12 @@ export default function CustomerDashboard() {
           <h2>Recent orders</h2>
           <Link to="/orders" className="topbar-action">View all</Link>
         </div>
-        {orders.length === 0 ? <p className="empty-state">No orders yet.</p> : orders.slice(0, 3).map((order) => (
-          <div className="list-row" key={order.id}>
+        {orders.length === 0 ? <p className="empty-state">No orders yet.</p> : <div className="order-card-grid">{orders.slice(0, 3).map((order) => (
+          <div className="order-card compact-order-card" key={order.id}>
             <div><strong>Order #{order.id}</strong><small>{order.restaurant?.name || 'Restaurant'} · {new Date(order.createdAt).toLocaleString()}</small></div>
-            <span className="pill">{order.status}</span>
-            <strong>₹{order.totalAmount}</strong>
+            <div className="order-card-summary"><span className="order-status" data-status={order.status}>{order.status}</span><strong>₹{order.totalAmount}</strong></div>
           </div>
-        ))}
+        ))}</div>}
       </div>}
 
       {showMenu && (

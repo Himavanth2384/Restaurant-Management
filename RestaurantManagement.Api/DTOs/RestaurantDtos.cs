@@ -14,6 +14,5 @@ public class UpdateRestaurantRequest
     public string? Email { get; set; }
     public string? OpeningTime { get; set; }
     public string? ClosingTime { get; set; }
-    public string? ImageUrl { get; set; }
     public bool? IsActive { get; set; }
 }

@@ -12,9 +12,7 @@ public class Restaurant
     public string Email { get; set; } = string.Empty;
     public string OpeningTime { get; set; } = string.Empty;
     public string ClosingTime { get; set; } = string.Empty;
-    public string? ImageUrl { get; set; }
     public int OwnerId { get; set; }
-    [JsonIgnore]
     public User? Owner { get; set; }
     public string Status { get; set; } = "Pending";
     public bool IsActive { get; set; } = true;

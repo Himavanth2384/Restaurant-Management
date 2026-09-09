@@ -3283,11 +3283,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "D:\\Projects\\Restaurant Management System\\RestaurantManagement.Api\\RestaurantManagement.Api.csproj",
+      "projectUniqueName": "D:\\Projects\\Restaurant Management System 09\\RestaurantManagement.Api\\RestaurantManagement.Api.csproj",
       "projectName": "RestaurantManagement.Api",
-      "projectPath": "D:\\Projects\\Restaurant Management System\\RestaurantManagement.Api\\RestaurantManagement.Api.csproj",
+      "projectPath": "D:\\Projects\\Restaurant Management System 09\\RestaurantManagement.Api\\RestaurantManagement.Api.csproj",
       "packagesPath": "C:\\Users\\Nadella Himavanth\\.nuget\\packages\\",
-      "outputPath": "D:\\Projects\\Restaurant Management System\\RestaurantManagement.Api\\obj\\",
+      "outputPath": "D:\\Projects\\Restaurant Management System 09\\RestaurantManagement.Api\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "C:\\Users\\Nadella Himavanth\\AppData\\Roaming\\NuGet\\NuGet.Config"
@@ -3357,7 +3357,7 @@
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.424/PortableRuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.425/PortableRuntimeIdentifierGraph.json"
       }
     }
   }

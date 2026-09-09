@@ -37,16 +37,50 @@ public class OwnerController : ControllerBase
         var restaurant = await GetOwnedRestaurantAsync();
         if (restaurant == null) return NotFound();
 
-        var orders = await _context.Orders.Where(o => o.RestaurantId == restaurant.Id).ToListAsync();
+        var orders = await _context.Orders
+            .Include(order => order.OrderItems)
+            .Where(order => order.RestaurantId == restaurant.Id)
+            .ToListAsync();
         var today = DateTime.UtcNow.Date;
-        return Ok(new
+        var activeOrders = orders.Where(order => order.Status != "Cancelled").ToList();
+        var todaysOrders = activeOrders.Where(order => order.CreatedAt.Date == today).ToList();
+        var todaysSales = todaysOrders.Sum(order => order.TotalAmount);
+        var totalSales = activeOrders.Sum(order => order.TotalAmount);
+        var mostOrderedItemToday = todaysOrders
+            .SelectMany(order => order.OrderItems)
+            .GroupBy(item => item.FoodName)
+            .Select(group => new { foodName = group.Key, count = group.Sum(item => item.Quantity) })
+            .OrderByDescending(item => item.count)
+            .FirstOrDefault();
+        var summary = new
         {
             restaurantName = restaurant.Name,
-            todaysOrders = orders.Count(o => o.CreatedAt.Date == today),
-            pendingOrders = orders.Count(o => o.Status == "Placed" || o.Status == "Accepted"),
-            completedOrders = orders.Count(o => o.Status == "Completed"),
-            todaysSales = orders.Where(o => o.CreatedAt.Date == today).Sum(o => o.TotalAmount),
-            totalMenuItems = await _context.MenuItems.CountAsync(m => m.RestaurantId == restaurant.Id)
+            totalMenuItems = await _context.MenuItems.CountAsync(item => item.RestaurantId == restaurant.Id),
+            currentPendingOrders = orders.Count(order => order.Status == "Placed" || order.Status == "Accepted"),
+            completedOrders = orders.Count(order => order.Status == "Completed"),
+            todaysOrders = todaysOrders.Count,
+            totalOrders = orders.Count,
+            averageOrderValue = activeOrders.Count == 0 ? 0 : Math.Round(totalSales / activeOrders.Count, 2),
+            mostOrderedItemToday,
+            todaysSales,
+            todaysProfit = Math.Round(todaysSales * 0.30m, 2),
+            totalProfit = Math.Round(totalSales * 0.30m, 2)
+        };
+
+        return Ok(new
+        {
+            summary,
+            summary.restaurantName,
+            summary.todaysOrders,
+            pendingOrders = summary.currentPendingOrders,
+            summary.completedOrders,
+            summary.todaysSales,
+            summary.totalMenuItems,
+            summary.totalOrders,
+            summary.averageOrderValue,
+            summary.mostOrderedItemToday,
+            summary.todaysProfit,
+            summary.totalProfit
         });
     }
 
@@ -95,7 +129,6 @@ public class OwnerController : ControllerBase
         if (request.Email != null) restaurant.Email = request.Email;
         if (request.OpeningTime != null) restaurant.OpeningTime = request.OpeningTime;
         if (request.ClosingTime != null) restaurant.ClosingTime = request.ClosingTime;
-        if (request.ImageUrl != null) restaurant.ImageUrl = request.ImageUrl;
         if (request.IsActive != null) restaurant.IsActive = request.IsActive.Value;
 
         await _context.SaveChangesAsync();
@@ -145,6 +178,142 @@ public class OwnerController : ControllerBase
         return Ok(items);
     }
 
+    [HttpGet("analytics")]
+    public async Task<IActionResult> GetAnalytics()
+    {
+        var restaurant = await GetOwnedRestaurantAsync();
+        if (restaurant == null) return NotFound();
+
+        var today = DateTime.UtcNow.Date;
+        var sevenDayStart = today.AddDays(-6);
+        var thirtyDayStart = today.AddDays(-29);
+        var analyticsOrders = await _context.Orders
+            .Include(order => order.OrderItems)
+            .Where(order => order.RestaurantId == restaurant.Id && order.CreatedAt >= thirtyDayStart)
+            .ToListAsync();
+        var completedOrders = analyticsOrders.Where(order => order.Status != "Cancelled").ToList();
+
+        var lastSevenDays = Enumerable.Range(0, 7)
+            .Select(offset => today.AddDays(-6 + offset))
+            .ToList();
+        var dailyOrders = lastSevenDays.Select(date => new
+        {
+            date = date.ToString("yyyy-MM-dd"),
+            label = date.ToString("ddd"),
+            count = completedOrders.Count(order => order.CreatedAt.Date == date)
+        }).ToList();
+        var dailySales = lastSevenDays.Select(date => new
+        {
+            date = date.ToString("yyyy-MM-dd"),
+            label = date.ToString("ddd"),
+            total = completedOrders.Where(order => order.CreatedAt.Date == date).Sum(order => order.TotalAmount)
+        }).ToList();
+
+        var thirtyDays = Enumerable.Range(0, 30)
+            .Select(offset => today.AddDays(-29 + offset))
+            .ToList();
+        var monthlySales = thirtyDays.Select(date => new
+        {
+            date = date.ToString("yyyy-MM-dd"),
+            label = date.ToString("dd MMM"),
+            total = completedOrders.Where(order => order.CreatedAt.Date == date).Sum(order => order.TotalAmount)
+        }).ToList();
+
+        var weekDays = new[] { DayOfWeek.Sunday, DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday, DayOfWeek.Saturday };
+        var weeklyOrders = weekDays.Select(day => new
+        {
+            day = day.ToString(),
+            count = completedOrders.Count(order => order.CreatedAt.DayOfWeek == day)
+        }).ToList();
+
+        var periodDefinitions = new[]
+        {
+            new { Name = "Breakfast", Start = 5, End = 11 },
+            new { Name = "Lunch", Start = 11, End = 16 },
+            new { Name = "Dinner", Start = 16, End = 22 },
+            new { Name = "Late night", Start = 22, End = 5 }
+        };
+        var hourlyFoodItems = periodDefinitions.Select(period => new
+        {
+            period = period.Name,
+            items = completedOrders
+                .Where(order => IsInTimePeriod(order.CreatedAt.Hour, period.Start, period.End))
+                .SelectMany(order => order.OrderItems)
+                .GroupBy(item => item.FoodName)
+                .Select(group => new { foodName = group.Key, count = group.Sum(item => item.Quantity) })
+                .OrderByDescending(item => item.count)
+                .Take(5)
+                .ToList()
+        }).ToList();
+
+        var peakHour = Enumerable.Range(0, 24)
+            .Select(hour => new
+            {
+                hour,
+                count = completedOrders.Count(order => order.CreatedAt.Hour == hour)
+            })
+            .OrderByDescending(item => item.count)
+            .ThenBy(item => item.hour)
+            .FirstOrDefault() ?? new { hour = 0, count = 0 };
+
+        return Ok(new
+        {
+            restaurantName = restaurant.Name,
+            last7Days = new
+            {
+                orders = dailyOrders,
+                totalOrders = dailyOrders.Sum(item => item.count),
+                sales = dailySales,
+                totalSales = dailySales.Sum(item => item.total)
+            },
+            monthlySales = new
+            {
+                daily = monthlySales,
+                totalOrders = completedOrders.Count,
+                totalSales = monthlySales.Sum(item => item.total)
+            },
+            weeklyOrders,
+            hourlyFoodItems,
+            topItems = new
+            {
+                today = GetTopItems(completedOrders, today),
+                last7Days = GetTopItems(completedOrders, sevenDayStart),
+                last30Days = GetTopItems(completedOrders, thirtyDayStart)
+            },
+            peakOrderTime = new
+            {
+                label = FormatHourRange(peakHour.hour),
+                count = peakHour.count
+            }
+        });
+    }
+
+    private static bool IsInTimePeriod(int hour, int start, int end)
+    {
+        return start < end ? hour >= start && hour < end : hour >= start || hour < end;
+    }
+
+    private static string FormatHourRange(int hour)
+    {
+        var start = DateTime.Today.AddHours(hour);
+        var end = start.AddHours(1);
+        return $"{start:h tt} - {end:h tt}";
+    }
+
+    private static IEnumerable<TopItem> GetTopItems(IEnumerable<Order> orders, DateTime startDate)
+    {
+        return orders
+            .Where(order => order.CreatedAt.Date >= startDate.Date)
+            .SelectMany(order => order.OrderItems)
+            .GroupBy(item => item.FoodName)
+            .Select(group => new TopItem(group.Key, group.Sum(item => item.Quantity)))
+            .OrderByDescending(item => item.count)
+            .Take(5)
+            .ToList();
+    }
+
+    private sealed record TopItem(string foodName, int count);
+
     [HttpPost("menu")]
     public async Task<IActionResult> CreateMenuItem([FromBody] CreateMenuItemRequest request)
     {
@@ -158,7 +327,6 @@ public class OwnerController : ControllerBase
             Description = request.Description,
             Price = request.Price,
             FoodType = request.FoodType,
-            ImageUrl = request.ImageUrl,
             IsAvailable = request.IsAvailable,
             CategoryId = request.CategoryId,
             RestaurantId = restaurant.Id
@@ -181,7 +349,6 @@ public class OwnerController : ControllerBase
         if (request.Description != null) item.Description = request.Description;
         if (request.Price.HasValue) item.Price = request.Price.Value;
         if (request.FoodType != null) item.FoodType = request.FoodType;
-        if (request.ImageUrl != null) item.ImageUrl = request.ImageUrl;
         if (request.IsAvailable.HasValue) item.IsAvailable = request.IsAvailable.Value;
         if (request.CategoryId.HasValue) item.CategoryId = request.CategoryId.Value;
 
@@ -206,7 +373,7 @@ public class OwnerController : ControllerBase
     {
         var restaurant = await GetOwnedRestaurantAsync();
         if (restaurant == null) return NotFound();
-        var orders = await _context.Orders.Where(o => o.RestaurantId == restaurant.Id).OrderByDescending(o => o.CreatedAt).Select(o => new
+        var orders = await _context.Orders.Where(o => o.RestaurantId == restaurant.Id).OrderByDescending(o => o.Id).Select(o => new
         {
             o.Id, o.TotalAmount, o.DeliveryAddress, o.Status, o.CreatedAt,
             customer = new { o.User!.Id, o.User.Name, o.User.Email, o.User.Phone, o.User.Address },

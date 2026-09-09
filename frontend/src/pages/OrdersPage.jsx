@@ -40,7 +40,7 @@ export default function OrdersPage() {
         <span className="pill">Recent activity</span>
       </div>
       {error && <p className="error">{error}</p>}
-      <div className="card owner-card">
+      <div className="card owner-card order-card-grid">
         {orders.length === 0 ? <p className="empty-state">No orders yet.</p> : orders.map((order) => (
           <div key={order.id} className="order-card">
             <div className="order-card-top">
@@ -51,7 +51,7 @@ export default function OrdersPage() {
               <strong>₹{order.totalAmount}</strong>
             </div>
             <div className="order-card-bottom">
-              <span className="pill">{order.status}</span>
+              <span className="order-status" data-status={order.status}>{order.status}</span>
               <small>Payment: {order.payment?.paymentMethod || 'Not available'}</small>
               <small>{new Date(order.createdAt).toLocaleString()}</small>
             </div>
@@ -69,7 +69,7 @@ export default function OrdersPage() {
                 {orderDetails[order.id] && <>
                   <div className="order-detail-meta">
                     <span>Delivery address: {orderDetails[order.id].deliveryAddress}</span>
-                    <span className="pill">Status: {orderDetails[order.id].status}</span>
+                    <span className="order-status" data-status={orderDetails[order.id].status}>Status: {orderDetails[order.id].status}</span>
                   </div>
                   <div className="order-detail-meta">
                     <span>Payment method: {orderDetails[order.id].payment?.paymentMethod || 'Not available'}</span>

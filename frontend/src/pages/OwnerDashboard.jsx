@@ -23,7 +23,6 @@ const emptyMenuForm = {
   price: '',
   foodType: 'Veg',
   categoryId: '',
-  imageUrl: '',
   isAvailable: true,
 };
 
@@ -33,7 +32,9 @@ export default function OwnerDashboard() {
   const [restaurant, setRestaurant] = useState(null);
   const [categories, setCategories] = useState([]);
   const [menuItems, setMenuItems] = useState([]);
+  const [menuFilter, setMenuFilter] = useState('All');
   const [editingMenuId, setEditingMenuId] = useState(null);
+  const [isMenuFormOpen, setIsMenuFormOpen] = useState(false);
   const [orders, setOrders] = useState([]);
   const [expandedOrderId, setExpandedOrderId] = useState(null);
   const [profile, setProfile] = useState({ name: '', email: '', phone: '', address: '', password: '' });
@@ -47,13 +48,24 @@ export default function OwnerDashboard() {
     email: '',
     openingTime: '',
     closingTime: '',
-    imageUrl: '',
     isActive: true,
   });
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
   const section = location.pathname;
+
+  useEffect(() => {
+    if (!message) return undefined;
+    const timer = setTimeout(() => setMessage(''), 5000);
+    return () => clearTimeout(timer);
+  }, [message]);
+
+  useEffect(() => {
+    if (!error) return undefined;
+    const timer = setTimeout(() => setError(''), 5000);
+    return () => clearTimeout(timer);
+  }, [error]);
 
   useEffect(() => {
     async function load() {
@@ -79,7 +91,6 @@ export default function OwnerDashboard() {
           email: restaurantData.email || '',
           openingTime: restaurantData.openingTime || '',
           closingTime: restaurantData.closingTime || '',
-          imageUrl: restaurantData.imageUrl || '',
           isActive: restaurantData.isActive ?? true,
         });
       } catch (err) {
@@ -159,6 +170,7 @@ export default function OwnerDashboard() {
       }
       setMenuForm(emptyMenuForm);
       setEditingMenuId(null);
+      setIsMenuFormOpen(false);
       const nextMenu = await fetchOwnerMenu();
       setMenuItems(nextMenu);
       setError('');
@@ -169,13 +181,13 @@ export default function OwnerDashboard() {
 
   const editMenuItem = (item) => {
     setEditingMenuId(item.id);
+    setIsMenuFormOpen(true);
     setMenuForm({
       name: item.name || '',
       description: item.description || '',
       price: item.price || '',
       foodType: item.foodType || 'Veg',
       categoryId: item.categoryId || '',
-      imageUrl: item.imageUrl || '',
       isAvailable: item.isAvailable ?? true,
     });
   };
@@ -185,6 +197,19 @@ export default function OwnerDashboard() {
       await deleteOwnerMenuItem(menuId);
       setMenuItems((items) => items.filter((item) => item.id !== menuId));
       setMessage('Menu item deleted.');
+      setError('');
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const toggleMenuAvailability = async (item) => {
+    try {
+      await updateOwnerMenuItem(item.id, { isAvailable: !item.isAvailable });
+      setMenuItems((items) => items.map((menuItem) => (
+        menuItem.id === item.id ? { ...menuItem, isAvailable: !item.isAvailable } : menuItem
+      )));
+      setMessage(`${item.name} is now ${!item.isAvailable ? 'available' : 'unavailable'}.`);
       setError('');
     } catch (err) {
       setError(err.message);
@@ -214,21 +239,16 @@ export default function OwnerDashboard() {
       </div>
       <div className="stats-grid">
         <div className="stat-card"><h3>Restaurant</h3><p>{data.restaurantName || '—'}</p></div>
-        <div className="stat-card"><h3>Menu Items</h3><p>{data.totalMenuItems ?? 0}</p></div>
-        <div className="stat-card"><h3>Today's Orders</h3><p>{data.todaysOrders ?? 0}</p></div>
-        <div className="stat-card"><h3>Pending Orders</h3><p>{data.pendingOrders ?? 0}</p></div>
+        <div className="stat-card"><h3>Total Menu Items</h3><p>{data.totalMenuItems ?? 0}</p></div>
+        <div className="stat-card"><h3>Current Pending Orders</h3><p>{data.pendingOrders ?? data.currentPendingOrders ?? 0}</p></div>
         <div className="stat-card"><h3>Completed Orders</h3><p>{data.completedOrders ?? 0}</p></div>
+        <div className="stat-card"><h3>Today's Orders</h3><p>{data.todaysOrders ?? 0}</p></div>
+        <div className="stat-card"><h3>Total Orders</h3><p>{data.totalOrders ?? 0}</p></div>
+        <div className="stat-card"><h3>Average Order Value</h3><p>₹{data.averageOrderValue ?? 0}</p></div>
+        <div className="stat-card"><h3>Most Ordered Item Today</h3><p>{data.mostOrderedItemToday?.foodName || 'No orders today'}</p><small>{data.mostOrderedItemToday ? `${data.mostOrderedItemToday.count} ordered` : ''}</small></div>
         <div className="stat-card"><h3>Today's Sales</h3><p>₹{data.todaysSales ?? 0}</p></div>
-      </div>
-      <div className="card owner-card">
-        <h3>Recent Orders</h3>
-        {orders.length === 0 ? <p className="empty-state">No orders yet.</p> : orders.slice(0, 5).map((order) => (
-          <div className="list-row" key={order.id}>
-            <span>#{order.id}</span>
-            <span>{order.status}</span>
-            <strong>₹{order.totalAmount}</strong>
-          </div>
-        ))}
+        <div className="stat-card"><h3>Today's Profit</h3><p>₹{data.todaysProfit ?? 0}</p><small>Estimated at 30% margin</small></div>
+        <div className="stat-card"><h3>Total Profit</h3><p>₹{data.totalProfit ?? 0}</p><small>Estimated at 30% margin</small></div>
       </div>
     </>
   );
@@ -253,10 +273,6 @@ export default function OwnerDashboard() {
             <label>
               Phone
               <input value={restaurantForm.phone} onChange={(e) => setRestaurantForm({ ...restaurantForm, phone: e.target.value })} />
-            </label>
-            <label>
-              Image URL
-              <input value={restaurantForm.imageUrl} onChange={(e) => setRestaurantForm({ ...restaurantForm, imageUrl: e.target.value })} />
             </label>
             <label className="full-width">
               Description
@@ -310,15 +326,15 @@ export default function OwnerDashboard() {
         <h2>Categories</h2>
         <span className="pill">Manage menu groups</span>
       </div>
-      <div className="card owner-card">
-        <form onSubmit={submitCategory} className="inline-form">
+      <div className="card owner-card categories-card">
+        <form onSubmit={submitCategory} className="category-form">
           <input value={categoryName} onChange={(e) => setCategoryName(e.target.value)} placeholder="Add new category" />
-          <button type="submit">Add category</button>
+          <button type="submit" className="category-submit">Add category</button>
         </form>
-        <div className="list-stack">
+        <div className="category-grid">
           {categories.length === 0 ? <p className="empty-state">No categories added yet.</p> : categories.map((category) => (
-            <div className="list-row" key={category.id}>
-              <span>{category.name}</span>
+            <div className="category-card" key={category.id}>
+              <span className="category-name">{category.name}</span>
               <button type="button" className="danger-button" onClick={() => removeCategory(category.id)}>Delete</button>
             </div>
           ))}
@@ -334,7 +350,18 @@ export default function OwnerDashboard() {
         <span className="pill">Add or update dishes</span>
       </div>
       <div className="card owner-card">
-        <form onSubmit={submitMenuItem} className="owner-form">
+        <button
+          type="button"
+          className="add-menu-button"
+          onClick={() => {
+            setEditingMenuId(null);
+            setMenuForm(emptyMenuForm);
+            setIsMenuFormOpen((isOpen) => !isOpen);
+          }}
+        >
+          {isMenuFormOpen && !editingMenuId ? 'Close menu form' : 'Add menu'}
+        </button>
+        {isMenuFormOpen && <form onSubmit={submitMenuItem} className="owner-form menu-form">
           <div className="field-grid">
             <label>
               Food name
@@ -360,38 +387,64 @@ export default function OwnerDashboard() {
                 ))}
               </select>
             </label>
-            <label className="full-width">
+            <label>
               Description
               <input value={menuForm.description} onChange={(e) => setMenuForm({ ...menuForm, description: e.target.value })} />
             </label>
-            <label className="full-width">
-              Image URL
-              <input value={menuForm.imageUrl} onChange={(e) => setMenuForm({ ...menuForm, imageUrl: e.target.value })} />
+            <label className="menu-availability-field">
+              <span>Availability</span>
+              <span className="availability-toggle">
+                <input
+                  type="checkbox"
+                  checked={menuForm.isAvailable}
+                  onChange={(e) => setMenuForm({ ...menuForm, isAvailable: e.target.checked })}
+                />
+                <span className="toggle-track" aria-hidden="true"><span /></span>
+                <span>{menuForm.isAvailable ? 'Available' : 'Unavailable'}</span>
+              </span>
             </label>
           </div>
-          <label>
-            Availability
-            <select value={menuForm.isAvailable ? 'Yes' : 'No'} onChange={(e) => setMenuForm({ ...menuForm, isAvailable: e.target.value === 'Yes' })}>
-              <option value="Yes">Yes</option>
-              <option value="No">No</option>
-            </select>
-          </label>
           <div className="row-actions">
-            <button type="submit">{editingMenuId ? 'Save menu item' : 'Add menu item'}</button>
-            {editingMenuId && <button type="button" className="secondary-button" onClick={() => { setEditingMenuId(null); setMenuForm(emptyMenuForm); }}>Cancel</button>}
+            <button type="submit" className="menu-submit">{editingMenuId ? 'Save menu item' : 'Add menu item'}</button>
+            <button type="button" className="secondary-button menu-cancel" onClick={() => { setEditingMenuId(null); setMenuForm(emptyMenuForm); setIsMenuFormOpen(false); }}>Cancel</button>
           </div>
-        </form>
-        <div className="list-stack">
-          {menuItems.length === 0 ? <p className="empty-state">No menu items added yet.</p> : menuItems.map((item) => (
-            <div className="list-row menu-row" key={item.id}>
+        </form>}
+        <div className="menu-filter-controls" role="group" aria-label="Filter menu by food type">
+          {['All', 'Veg', 'NonVeg'].map((filter) => (
+            <button
+              type="button"
+              key={filter}
+              className={`menu-filter-button ${menuFilter === filter ? 'active' : ''}`}
+              onClick={() => setMenuFilter(filter)}
+            >
+              {filter === 'NonVeg' ? 'Non-Veg' : filter}
+            </button>
+          ))}
+        </div>
+        <div className="owner-menu-grid">
+          {menuItems.filter((item) => menuFilter === 'All' || item.foodType === menuFilter).length === 0 ? <p className="empty-state">No {menuFilter === 'All' ? '' : `${menuFilter === 'NonVeg' ? 'non-veg' : 'veg'} `}menu items found.</p> : menuItems.filter((item) => menuFilter === 'All' || item.foodType === menuFilter).map((item) => (
+            <div className="owner-menu-card" key={item.id}>
               <div>
-                <strong>{item.name}</strong>
-                <small>{item.foodType} • ₹{item.price}</small>
-                <small>Availability: {item.isAvailable ? 'Yes' : 'No'}</small>
+                <div className="owner-menu-card-heading">
+                  <strong>{item.name}</strong>
+                  <span className={`food-type-badge ${item.foodType === 'Veg' ? 'veg' : 'non-veg'}`}>
+                    {item.foodType === 'NonVeg' ? 'Non-Veg' : item.foodType}
+                  </span>
+                </div>
+                <small className="owner-menu-price">₹{item.price}</small>
               </div>
               <div className="row-actions">
                 <button type="button" className="secondary-button" onClick={() => editMenuItem(item)}>Edit</button>
                 <button type="button" className="danger-button" onClick={() => removeMenuItem(item.id)}>Delete</button>
+                <label className="availability-toggle" title="Toggle availability">
+                  <input
+                    type="checkbox"
+                    checked={item.isAvailable}
+                    onChange={() => toggleMenuAvailability(item)}
+                  />
+                  <span className="toggle-track" aria-hidden="true"><span /></span>
+                  <span className="visually-hidden">{item.isAvailable ? 'Available' : 'Unavailable'}</span>
+                </label>
               </div>
             </div>
           ))}
@@ -407,7 +460,7 @@ export default function OwnerDashboard() {
         <span className="pill">Track customer orders</span>
       </div>
       <div className="card owner-card">
-        <div className="list-stack">
+        <div className="owner-orders-grid">
           {orders.length === 0 ? <p className="empty-state">No orders yet.</p> : orders.map((order) => (
             <div key={order.id} className="order-card">
               <div className="order-card-top">
@@ -418,7 +471,7 @@ export default function OwnerDashboard() {
                 <strong>₹{order.totalAmount}</strong>
               </div>
               <div className="order-card-bottom">
-                <span className="pill">{order.status}</span>
+                <span className="order-status" data-status={order.status}>{order.status}</span>
                 <select value={order.status} onChange={(e) => handleStatusUpdate(order.id, e.target.value)}>
                   <option value="Placed">Placed</option>
                   <option value="Accepted">Accepted</option>

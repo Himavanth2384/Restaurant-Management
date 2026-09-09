@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { deleteAdminUser, fetchAdminOrders, fetchAdminProfile, fetchAdminUsers, fetchDashboard, fetchRestaurants, updateAdminProfile, updateAdminRestaurantVisibility } from '../services/api';
+import { deleteAdminUser, fetchAdminOrders, fetchAdminProfile, fetchAdminRestaurantMenu, fetchAdminUsers, fetchDashboard, fetchRestaurants, updateAdminProfile, updateAdminRestaurantVisibility } from '../services/api';
 
 export default function AdminDashboard() {
   const location = useLocation();
@@ -9,8 +9,22 @@ export default function AdminDashboard() {
   const [users, setUsers] = useState([]);
   const [orders, setOrders] = useState([]);
   const [profile, setProfile] = useState({ name: '', email: '', phone: '', address: '', password: '' });
+  const [restaurantMenu, setRestaurantMenu] = useState([]);
+  const [selectedRestaurant, setSelectedRestaurant] = useState(null);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!message) return undefined;
+    const timer = setTimeout(() => setMessage(''), 5000);
+    return () => clearTimeout(timer);
+  }, [message]);
+
+  useEffect(() => {
+    if (!error) return undefined;
+    const timer = setTimeout(() => setError(''), 5000);
+    return () => clearTimeout(timer);
+  }, [error]);
 
   useEffect(() => {
     async function load() {
@@ -34,6 +48,18 @@ export default function AdminDashboard() {
       setMessage('Restaurant visibility updated.');
       setError('');
     } catch (err) { setError(err.message); }
+  };
+
+  const openRestaurantMenu = async (restaurant) => {
+    try {
+      const data = await fetchAdminRestaurantMenu(restaurant.id);
+      setSelectedRestaurant(data.restaurant);
+      setRestaurantMenu(data.menuItems || []);
+      setMessage(`${restaurant.name} menu loaded.`);
+      setError('');
+    } catch (err) {
+      setError(err.message);
+    }
   };
 
   const deleteUser = async (userId) => {
@@ -61,37 +87,138 @@ export default function AdminDashboard() {
 
   const renderOverview = () => <div className="stats-grid">
     <div className="stat-card"><h3>Total Restaurants</h3><p>{stats.totalRestaurants ?? 0}</p></div>
-    <div className="stat-card"><h3>Active Restaurants</h3><p>{restaurants.filter((restaurant) => restaurant.isActive).length}</p></div>
-    <div className="stat-card"><h3>Total Owners</h3><p>{owners.length}</p></div>
-    <div className="stat-card"><h3>Total Users</h3><p>{customers.length}</p></div>
+    <div className="stat-card"><h3>Active Restaurants</h3><p>{stats.activeRestaurants ?? restaurants.filter((restaurant) => restaurant.isActive).length}</p></div>
+    <div className="stat-card"><h3>Total Registered Users</h3><p>{stats.totalUsers ?? customers.length}</p></div>
+    <div className="stat-card"><h3>Orders Today</h3><p>{stats.todaysOrders ?? 0}</p></div>
+    <div className="stat-card"><h3>Revenue Today</h3><p>₹{stats.todaysRevenue ?? 0}</p></div>
     <div className="stat-card"><h3>Total Orders</h3><p>{stats.totalOrders ?? 0}</p></div>
-    <div className="stat-card"><h3>Total Revenue</h3><p>{stats.totalRevenue ?? 0}</p></div>
+    <div className="stat-card"><h3>Total Revenue</h3><p>₹{stats.totalRevenue ?? 0}</p></div>
   </div>;
 
-  const renderRestaurants = () => <div className="card" id="restaurants">
-    <h3>Restaurants</h3>
-    {restaurants.length === 0 ? <p className="empty-state">No restaurants found.</p> : restaurants.map((restaurant) => (
-      <div className="list-row" key={restaurant.id}>
-        <div><strong>{restaurant.name}</strong> <small>{restaurant.address || 'No address provided'}</small></div>
-        <select value={restaurant.isActive ? 'Active' : 'Hide'} onChange={(event) => updateVisibility(restaurant.id, event.target.value === 'Active')}>
-          <option>Active</option><option>Hide</option>
-        </select>
+  const renderRestaurants = () => <div className="card admin-restaurants-section" id="restaurants">
+    <div className="admin-section-title">
+      <h3>Restaurants</h3>
+      <span className="pill">{restaurants.length}</span>
+    </div>
+    {restaurants.length === 0 ? <p className="empty-state">No restaurants found.</p> : <div className="admin-restaurant-card-grid">
+      {restaurants.map((restaurant) => (
+        <div className="admin-restaurant-card" key={restaurant.id}>
+          <div className="admin-restaurant-card-top">
+            <div>
+              <strong className="admin-restaurant-card-name">{restaurant.name}</strong>
+              <small className="admin-restaurant-card-address">{restaurant.address || 'No address provided'}</small>
+            </div>
+            <span className={`status-badge ${restaurant.isActive ? 'active' : 'hidden'}`}>{restaurant.isActive ? 'Active' : 'Hidden'}</span>
+          </div>
+          <div className="admin-restaurant-card-meta">
+            <span><b>Owner</b>{restaurant.owner?.name || restaurant.ownerName || 'No owner assigned'}</span>
+            <span><b>Status</b>{restaurant.status || 'Pending'}</span>
+          </div>
+          <div className="admin-restaurant-card-actions">
+            <div className="admin-restaurant-card-footer">
+              <button type="button" className="admin-open-menu-button" onClick={() => openRestaurantMenu(restaurant)}>Open Menu</button>
+              <label className="availability-toggle restaurant-visibility-toggle" title={restaurant.isActive ? 'Disable restaurant' : 'Enable restaurant'}>
+                <input type="checkbox" checked={restaurant.isActive} onChange={(event) => updateVisibility(restaurant.id, event.target.checked)} />
+                <span className="toggle-track" aria-hidden="true"><span /></span>
+                <span className="toggle-label">{restaurant.isActive ? 'Active' : 'Inactive'}</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>}
+    {selectedRestaurant && (
+      <div className="admin-restaurant-menu-panel">
+        <div className="admin-restaurant-menu-head">
+          <div>
+            <span className="panel-kicker">Restaurant Menu</span>
+            <h3>{selectedRestaurant.name}</h3>
+          </div>
+          <span className="pill">{restaurantMenu.length} items</span>
+        </div>
+        {restaurantMenu.length === 0 ? <p className="empty-state">No menu items found.</p> : (
+          <div className="admin-restaurant-menu-card-grid">
+            {restaurantMenu.map((item) => (
+              <div className="admin-restaurant-menu-card" key={item.id}>
+                <div className="admin-restaurant-menu-card-top">
+                  <div>
+                    <strong className="admin-restaurant-menu-card-name">{item.name}</strong>
+                    <small className="admin-restaurant-menu-card-category">{item.categoryName || 'General'} </small>
+                  </div>
+                  <span className={`menu-card-availability ${item.isAvailable ? 'available' : 'unavailable'}`}>{item.isAvailable ? 'Available' : 'Unavailable'}</span>
+                </div>
+                <p className="admin-restaurant-menu-card-description">{item.description || 'No description'}</p>
+                <div className="admin-restaurant-menu-card-meta">
+                  <span className={`food-type-${item.foodType}`}>{item.foodType}</span>
+                  <span className="menu-price">₹{item.price}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
-    ))}
+    )}
   </div>;
 
   const renderOwners = () => <div className="card" id="owners">
-    <h3>Owners</h3>
-    {owners.length === 0 ? <p className="empty-state">No restaurant owners found.</p> : owners.map((owner) => (
-      <div className="list-row" key={owner.id}><div><strong>{owner.name}</strong><small>{owner.email} · {owner.phone || 'No phone'} · {owner.address || 'No address'}</small></div><span>{(owner.restaurants?.length ? owner.restaurants : restaurants.filter((restaurant) => restaurant.ownerId === owner.id)).map((restaurant) => restaurant.name).join(', ') || 'No restaurant assigned'}</span></div>
-    ))}
+    <div className="admin-section-title">
+      <h3>Owners</h3>
+      <span className="pill">{owners.length}</span>
+    </div>
+    {owners.length === 0 ? <p className="empty-state">No restaurant owners found.</p> : (
+      <div className="admin-profile-card-grid">
+        {owners.map((owner) => {
+          const ownerRestaurants = (owner.restaurants?.length ? owner.restaurants : restaurants.filter((restaurant) => restaurant.ownerId === owner.id));
+          return (
+            <div className="admin-profile-card" key={owner.id}>
+              <div className="admin-profile-card-head">
+                <div>
+                  <strong className="admin-profile-card-name">{owner.name}</strong>
+                  <small className="admin-profile-card-role">Restaurant Owner</small>
+                </div>
+              </div>
+              <div className="admin-profile-card-details">
+                <span>{'Email: ' + owner.email}</span>
+                <span>{'Phone: ' + (owner.phone || 'No phone')}</span>
+                <span>{'Address: ' + (owner.address || 'No address')}</span>
+              </div>
+              <div className="admin-profile-card-footer">
+                <span className="admin-profile-card-restaurants">{ownerRestaurants.map((restaurant) => `Restaurant: ${restaurant.name}`).join(', ') || 'No restaurant assigned'}</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    )}
   </div>;
 
   const renderUsers = () => <div className="card" id="users">
-    <h3>Users</h3>
-    {customers.length === 0 ? <p className="empty-state">No users found.</p> : customers.map((user) => (
-      <div className="list-row" key={user.id}><div><strong>{user.name}</strong> <small>{user.email} · {user.phone || 'No phone'} · {user.address || 'No address'}</small></div><button type="button" className="danger-button" onClick={() => deleteUser(user.id)}>Delete</button></div>
-    ))}
+    <div className="admin-section-title">
+      <h3>Users</h3>
+      <span className="pill">{customers.length}</span>
+    </div>
+    {customers.length === 0 ? <p className="empty-state">No users found.</p> : (
+      <div className="admin-profile-card-grid">
+        {customers.map((user) => (
+          <div className="admin-profile-card" key={user.id}>
+            <div className="admin-profile-card-head">
+              <div>
+                <strong className="admin-profile-card-name">{user.name}</strong>
+                <small className="admin-profile-card-role">Customer</small>
+              </div>
+            </div>
+            <div className="admin-profile-card-details">
+              <span>{'Email: ' + user.email}</span>
+              <span>{'Phone: ' + (user.phone || 'No phone')}</span>
+              <span>{'Address: ' + (user.address || 'No address')}</span>
+            </div>
+            <div className="admin-profile-card-footer">
+              <button type="button" className="danger-button" onClick={() => deleteUser(user.id)}>Delete</button>
+            </div>
+          </div>
+        ))}
+      </div>
+    )}
   </div>;
 
   const renderSettings = () => <div className="card" id="settings">
@@ -106,16 +233,16 @@ export default function AdminDashboard() {
     </form>
   </div>;
 
-  const renderOrders = () => <div className="card" id="orders">
+  const renderOrders = () => <div className="card order-card-grid" id="orders">
     <h3>Orders</h3>
     {orders.length === 0 ? <p className="empty-state">No orders found.</p> : orders.map((order) => (
-      <div className="list-row" key={order.id}>
+      <div className="order-card compact-order-card" key={order.id}>
         <div>
           <strong>Order #{order.id}</strong>
           <small> {order.customer?.name || 'Customer'} · {order.restaurant?.name || 'Restaurant'} · {new Date(order.createdAt).toLocaleString()}</small>
         </div>
         <div className="row-actions">
-          <span className="pill">{order.status}</span>
+          <span className="order-status" data-status={order.status}>{order.status}</span>
           <strong>₹{order.totalAmount}</strong>
         </div>
       </div>

@@ -8,6 +8,8 @@ import OwnerDashboard from './pages/OwnerDashboard';
 import CustomerDashboard from './pages/CustomerDashboard';
 import OrdersPage from './pages/OrdersPage';
 import SettingsPage from './pages/SettingsPage';
+import AnalyticsPage from './pages/AnalyticsPage';
+import AdminAnalyticsPage from './pages/AdminAnalyticsPage';
 import { fetchMe } from './services/api';
 
 function getSessionState() {
@@ -30,6 +32,7 @@ function getNavItems(role) {
       { label: 'Owners', path: '/admin/dashboard#owners', icon: '🤵' },
       { label: 'Users', path: '/admin/dashboard#users', icon: '◎' },
       { label: 'Orders', path: '/admin/dashboard#orders', icon: '📄' },
+      { label: 'Analytics', path: '/admin/analytics', icon: '📊' },
       { label: 'Settings', path: '/admin/dashboard#settings', icon: '⚙' },
     ];
   }
@@ -40,6 +43,7 @@ function getNavItems(role) {
       { label: 'Categories', path: '/owner/categories', icon: '☰' },
       { label: 'Menu', path: '/owner/menu', icon: '📃' },
       { label: 'Orders', path: '/owner/orders', icon: '📄' },
+      { label: 'Analytics', path: '/owner/analytics', icon: '📊' },
       { label: 'My Restaurant', path: '/owner/restaurant', icon: '🏠' },
       { label: 'Settings', path: '/owner/settings', icon: '⚙' },
     ];
@@ -122,11 +126,13 @@ function Layout() {
       <Route path="/login" element={isLoggedIn ? <Navigate to={homeRedirect} replace /> : <LoginPage />} />
       <Route path="/register" element={isLoggedIn ? <Navigate to={homeRedirect} replace /> : <RegisterPage />} />
       <Route path="/admin/dashboard" element={isLoggedIn && role === 'SuperAdmin' ? <AdminDashboard /> : <Navigate to="/login" replace />} />
+      <Route path="/admin/analytics" element={isLoggedIn && role === 'SuperAdmin' ? <AdminAnalyticsPage /> : <Navigate to="/login" replace />} />
       <Route path="/owner/dashboard" element={isLoggedIn && role === 'RestaurantOwner' ? <OwnerDashboard /> : <Navigate to="/login" replace />} />
       <Route path="/owner/restaurant" element={isLoggedIn && role === 'RestaurantOwner' ? <OwnerDashboard /> : <Navigate to="/login" replace />} />
       <Route path="/owner/categories" element={isLoggedIn && role === 'RestaurantOwner' ? <OwnerDashboard /> : <Navigate to="/login" replace />} />
       <Route path="/owner/menu" element={isLoggedIn && role === 'RestaurantOwner' ? <OwnerDashboard /> : <Navigate to="/login" replace />} />
       <Route path="/owner/orders" element={isLoggedIn && role === 'RestaurantOwner' ? <OwnerDashboard /> : <Navigate to="/login" replace />} />
+      <Route path="/owner/analytics" element={isLoggedIn && role === 'RestaurantOwner' ? <AnalyticsPage /> : <Navigate to="/login" replace />} />
       <Route path="/owner/settings" element={isLoggedIn && role === 'RestaurantOwner' ? <OwnerDashboard /> : <Navigate to="/login" replace />} />
       <Route path="/restaurants" element={isLoggedIn && role === 'User' ? <CustomerDashboard /> : <Navigate to="/login" replace />} />
       <Route path="/restaurants/:restaurantId" element={isLoggedIn && role === 'User' ? <CustomerDashboard /> : <Navigate to="/login" replace />} />
