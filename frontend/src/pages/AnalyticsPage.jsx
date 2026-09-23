@@ -19,7 +19,7 @@ function getMax(values) {
   return Math.max(...values, 1);
 }
 
-// BarChart component
+/* BarChart component */
 function BarChart({ data, valueKey, valueFormatter = (value) => value, tone = 'gold' }) {
   const max = getMax(data.map((item) => Number(item[valueKey] || 0)));
   const [hoveredIndex, setHoveredIndex] = useState(null);
@@ -128,31 +128,35 @@ export default function AnalyticsPage() {
         <div className="analytics-kpi"><span>30-day orders</span><strong>{analytics.monthlySales.totalOrders ?? 0}</strong><small>Non-cancelled orders in the last 30 days</small></div>
         <div className="analytics-kpi"><span>30-day sales</span><strong>{formatCurrency(analytics.monthlySales.totalSales)}</strong><small>Monthly sales total</small></div>
       </div>
-
+      {/* Daily orders chart */}
       <div className="analytics-chart-grid">
-        <section className="analytics-panel"> // Daily orders chart
+        <section className="analytics-panel"> 
           <div className="analytics-panel-heading"><div><p className="eyebrow">Past 7 days</p><h3>Daily orders</h3></div><span className="chart-legend orders-legend">Orders</span></div>
           <BarChart data={analytics.last7Days.orders} valueKey="count" tone="blue" />
         </section>
-        <section className="analytics-panel"> // Daily sales chart
+        {/* Daily sales chart */}
+        <section className="analytics-panel">
           <div className="analytics-panel-heading"><div><p className="eyebrow">Past 7 days</p><h3>Daily sales</h3></div><span className="chart-legend sales-legend">Sales</span></div>
           <BarChart data={analytics.last7Days.sales} valueKey="total" valueFormatter={formatCurrency} tone="green" />
         </section>
       </div>
-
-      <section className="analytics-panel monthly-panel"> // Monthly sales trend chart
+      {/* Monthly sales trend chart */}
+      <section className="analytics-panel monthly-panel"> 
         <div className="analytics-panel-heading"><div><p className="eyebrow">Monthly sales analytics</p><h3>30-day sales trend</h3></div><strong className="panel-total">{formatCurrency(analytics.monthlySales.totalSales)}</strong></div>
         <SalesLineChart data={analytics.monthlySales.daily} />
       </section>
 
+      {/* Weekly / Busiest Days */}
       <div className="analytics-lower-grid">
-        <section className="analytics-panel"> // Weekly / Busiest Days
+        <section className="analytics-panel"> 
           <div className="analytics-panel-heading"><div><p className="eyebrow">Weekly order analytics</p><h3>Busiest days</h3></div></div>
           <div className="weekday-bars">
             {analytics.weeklyOrders.map((item) => <div className="weekday-row" key={item.day}><span>{item.day}</span><div><i style={{ width: `${(item.count / orderMax) * 100}%` }} /></div><strong>{item.count}</strong></div>)}
           </div>
         </section>
-        <section className="analytics-panel"> // Hourly Food / Daypart
+
+        {/* Hourly Food / Daypart */}
+        <section className="analytics-panel"> 
           <div className="analytics-panel-heading"><div><p className="eyebrow">Hourly food item analytics</p><h3>What guests order by daypart</h3></div></div>
           <div className="daypart-grid">
             {analytics.hourlyFoodItems.map((period) => <div className="daypart-card" key={period.period}><strong>{period.period}</strong>{period.items.length === 0 ? <small>No orders</small> : period.items.slice(0, 3).map((item) => <span key={item.foodName}>{item.foodName}<b>{item.count}</b></span>)}</div>)}
@@ -160,7 +164,7 @@ export default function AnalyticsPage() {
         </section>
       </div>
 
-      // Top Ordered Food Items
+      {/* Top Ordered Food Items */}
       <section className="analytics-panel top-items-panel">
         <div className="analytics-panel-heading"><div><p className="eyebrow">Most ordered food items</p><h3>Top performers</h3></div></div>
         <div className="top-items-grid">
