@@ -15,9 +15,10 @@ public static class JwtHelper
         {
             new(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new(ClaimTypes.Name, user.Email),
-            new(ClaimTypes.Role, user.Role)
+            new(ClaimTypes.Role, user.Role) // puts the user's role inside the JWT
         };
 
+        // token creation with claims, expiration, and signing credentials
         var tokenDescriptor = new SecurityTokenDescriptor
         {
             Subject = new ClaimsIdentity(claims),

@@ -9,6 +9,7 @@ using System.Security.Claims;
 
 namespace RestaurantManagement.Api.Controllers;
 
+// Protects all RestaurantOwner APIs
 [ApiController]
 [Route("api/owner")]
 [Authorize(Roles = "RestaurantOwner")]
@@ -178,41 +179,42 @@ public class OwnerController : ControllerBase
         return Ok(items);
     }
 
+    // Analytics processing starts here
     [HttpGet("analytics")]
     public async Task<IActionResult> GetAnalytics()
     {
         var restaurant = await GetOwnedRestaurantAsync();
         if (restaurant == null) return NotFound();
 
-        var today = DateTime.UtcNow.Date;
-        var sevenDayStart = today.AddDays(-6);
-        var thirtyDayStart = today.AddDays(-29);
-        var analyticsOrders = await _context.Orders
+        var today = DateTime.UtcNow.Date;  // Gets today's date using DateTime.UtcNow.Date
+        var sevenDayStart = today.AddDays(-6); // Defines the 7-day analytics period
+        var thirtyDayStart = today.AddDays(-29); // Defines the 30-day analytics period
+        var analyticsOrders = await _context.Orders // Fetches orders for analytics, including order items, filtered by restaurant and date
             .Include(order => order.OrderItems)
             .Where(order => order.RestaurantId == restaurant.Id && order.CreatedAt >= thirtyDayStart)
             .ToListAsync();
-        var completedOrders = analyticsOrders.Where(order => order.Status != "Cancelled").ToList();
+        var completedOrders = analyticsOrders.Where(order => order.Status != "Cancelled").ToList(); // Filters out cancelled orders for analytics
 
-        var lastSevenDays = Enumerable.Range(0, 7)
+        var lastSevenDays = Enumerable.Range(0, 7) // Creates the dates used for the 7-day graphs
             .Select(offset => today.AddDays(-6 + offset))
             .ToList();
-        var dailyOrders = lastSevenDays.Select(date => new
+        var dailyOrders = lastSevenDays.Select(date => new // Counts orders for each individual day
         {
             date = date.ToString("yyyy-MM-dd"),
             label = date.ToString("ddd"),
-            count = completedOrders.Count(order => order.CreatedAt.Date == date)
+            count = completedOrders.Count(order => order.CreatedAt.Date == date) 
         }).ToList();
-        var dailySales = lastSevenDays.Select(date => new
+        var dailySales = lastSevenDays.Select(date => new // Sums sales for each individual day
         {
             date = date.ToString("yyyy-MM-dd"),
             label = date.ToString("ddd"),
             total = completedOrders.Where(order => order.CreatedAt.Date == date).Sum(order => order.TotalAmount)
         }).ToList();
 
-        var thirtyDays = Enumerable.Range(0, 30)
+        var thirtyDays = Enumerable.Range(0, 30) // Creates the dates used for the 30-day graphs
             .Select(offset => today.AddDays(-29 + offset))
             .ToList();
-        var monthlySales = thirtyDays.Select(date => new
+        var monthlySales = thirtyDays.Select(date => new // Sums sales for each individual day over the last 30 days
         {
             date = date.ToString("yyyy-MM-dd"),
             label = date.ToString("dd MMM"),
@@ -220,19 +222,20 @@ public class OwnerController : ControllerBase
         }).ToList();
 
         var weekDays = new[] { DayOfWeek.Sunday, DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday, DayOfWeek.Saturday };
-        var weeklyOrders = weekDays.Select(day => new
+        var weeklyOrders = weekDays.Select(day => new // Counts orders for each day of the week
         {
             day = day.ToString(),
             count = completedOrders.Count(order => order.CreatedAt.DayOfWeek == day)
         }).ToList();
 
-        var periodDefinitions = new[]
+        var periodDefinitions = new[] // Defines the time periods for hourly food item analysis
         {
             new { Name = "Breakfast", Start = 5, End = 11 },
             new { Name = "Lunch", Start = 11, End = 16 },
             new { Name = "Dinner", Start = 16, End = 22 },
             new { Name = "Late night", Start = 22, End = 5 }
         };
+        // Analyzes the top 5 food items for each defined time period
         var hourlyFoodItems = periodDefinitions.Select(period => new
         {
             period = period.Name,
@@ -246,7 +249,7 @@ public class OwnerController : ControllerBase
                 .ToList()
         }).ToList();
 
-        var peakHour = Enumerable.Range(0, 24)
+        var peakHour = Enumerable.Range(0, 24) // Analyzes the peak order time by hour
             .Select(hour => new
             {
                 hour,

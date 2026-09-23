@@ -22,13 +22,15 @@ export default function LoginPage() {
     e.preventDefault();
     setError('');
 
+    // Call the loginUser function to authenticate the user
     try {
       const data = await loginUser(form.email, form.password);
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('role', data.role);
-      localStorage.setItem('userName', data.name);
-      window.dispatchEvent(new Event('auth:change'));
-
+      localStorage.setItem('token', data.token); // Store the JWT token in localStorage
+      localStorage.setItem('role', data.role); // Store the user's role in localStorage
+      localStorage.setItem('userName', data.name); // Store the user's name in localStorage
+      window.dispatchEvent(new Event('auth:change')); // Notify other parts of the app about the authentication status
+      
+      // Role-based navigation after successful login
       if (data.role === 'SuperAdmin') navigate('/admin/dashboard', { replace: true });
       else if (data.role === 'RestaurantOwner') navigate('/owner/dashboard', { replace: true });
       else navigate('/restaurants', { replace: true });

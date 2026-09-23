@@ -30,6 +30,7 @@ builder.Services.AddCors(options =>
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+// JWT Authentication configuration
 var key = Encoding.ASCII.GetBytes(builder.Configuration["Jwt:Key"] ?? "restaurant-management-secret-key-123456");
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -45,22 +46,24 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(); // Add authorization services
 
 var app = builder.Build();
 
+// Seed the database with initial data
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     await SeedData.InitializeAsync(context);
 }
-
+// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
+// Middleware configuration
 app.UseCors("FrontendPolicy");
 app.UseHttpsRedirection();
 app.UseAuthentication();

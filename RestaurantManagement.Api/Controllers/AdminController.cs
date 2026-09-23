@@ -9,9 +9,10 @@ using RestaurantManagement.Api.Models;
 
 namespace RestaurantManagement.Api.Controllers;
 
+// Main SuperAdmin role restriction for all endpoints in this controller
 [ApiController]
 [Route("api/admin")]
-[Authorize(Roles = "SuperAdmin")]
+[Authorize(Roles = "SuperAdmin")] // Restrict access to SuperAdmin role
 public class AdminController : ControllerBase
 {
     private readonly AppDbContext _context;
@@ -22,6 +23,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpGet("dashboard")]
+    // Endpoint to get dashboard statistics for the admin
     public async Task<IActionResult> Dashboard()
     {
         var restaurants = await _context.Restaurants.ToListAsync();
@@ -57,7 +59,8 @@ public class AdminController : ControllerBase
             .ToListAsync();
         var activeOrders = orders.Where(order => order.Status != "Cancelled").ToList();
         var customers = await _context.Users.Where(user => user.Role == "User").ToListAsync();
-
+        
+        // Calculate restaurant comparison data
         var restaurantComparison = restaurants.Select(restaurant =>
         {
             var restaurantOrders = activeOrders.Where(order => order.RestaurantId == restaurant.Id).ToList();
@@ -72,6 +75,7 @@ public class AdminController : ControllerBase
             };
         }).ToList();
 
+        // Calculate weekly revenue data for the last 7 days
         var lastSevenDates = Enumerable.Range(0, 7).Select(offset => today.AddDays(-6 + offset)).ToList();
         var weeklyRevenue = lastSevenDates.Select(date => new
         {
@@ -85,6 +89,7 @@ public class AdminController : ControllerBase
             }).ToList()
         }).ToList();
 
+        // Calculate monthly revenue data for the last 30 days
         var monthlyRevenue = Enumerable.Range(0, 30).Select(offset => today.AddDays(-29 + offset)).Select(date => new
         {
             date = date.ToString("yyyy-MM-dd"),
@@ -92,6 +97,7 @@ public class AdminController : ControllerBase
             total = activeOrders.Where(order => order.CreatedAt.Date == date).Sum(order => order.TotalAmount)
         }).ToList();
 
+        // Calculate top 10 ordered items and peak order time
         var topItems = activeOrders
             .SelectMany(order => order.OrderItems)
             .GroupBy(item => item.FoodName)
@@ -105,6 +111,7 @@ public class AdminController : ControllerBase
             .ThenBy(item => item.hour)
             .FirstOrDefault() ?? new { hour = 0, count = 0 };
 
+        // Return the analytics data as a JSON response
         return Ok(new
         {
             summary = new
@@ -174,6 +181,7 @@ public class AdminController : ControllerBase
         return Ok(restaurants);
     }
 
+    // Endpoint to get the menu items of a specific restaurant by its ID
     [HttpGet("restaurants/{id}/menu")]
     public async Task<IActionResult> GetRestaurantMenu(int id)
     {
@@ -242,6 +250,7 @@ public class AdminController : ControllerBase
         return Ok(new { message = "Restaurant rejected." });
     }
 
+    // Endpoint to get a list of users with optional search functionality
     [HttpGet("users")]
     public async Task<IActionResult> GetUsers([FromQuery] string? search)
     {
@@ -256,6 +265,7 @@ public class AdminController : ControllerBase
         return Ok(userDetails);
     }
 
+    // Endpoint to get the profile of the currently authenticated admin
     [HttpGet("profile")]
     public async Task<IActionResult> GetProfile()
     {

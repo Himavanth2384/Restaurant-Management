@@ -7,11 +7,12 @@ export async function updateCustomerProfile(payload) {
 }
 const API_BASE_URL = 'http://localhost:5277/api';
 
+// Token attachment and error handling for all API requests
 async function request(path, options = {}) {
   const token = localStorage.getItem('token');
   const headers = {
     'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}), // Attach token if available
     ...(options.headers || {})
   };
 
@@ -36,6 +37,7 @@ function sortOrdersById(orders) {
   return [...orders].sort((first, second) => Number(second.id) - Number(first.id));
 }
 
+// API functions for authentication and user management
 export async function loginUser(email, password) {
   return request('/auth/login', {
     method: 'POST',

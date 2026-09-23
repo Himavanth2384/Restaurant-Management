@@ -41,8 +41,9 @@ export default function AdminAnalyticsPage() {
   const monthlyMax = maxValue(data.monthlyRevenue.map((item) => item.total));
 
   return <div className="page admin-analytics-page">
-    <div className="page-header analytics-header">
+    <div className="page-header analytics-header"> 
       <div><p className="eyebrow">System intelligence</p><h2>SuperAdmin Analytics</h2><p className="analytics-subtitle">Cross-restaurant performance and customer activity.</p></div>
+      // Peak ordering time
       <div className="analytics-peak-card"><span>Peak ordering time</span><strong>{data.peakOrderTime.label}</strong><small>{data.peakOrderTime.count} orders in this hour</small></div>
     </div>
     {error && <p className="error">{error}</p>}
@@ -57,6 +58,7 @@ export default function AdminAnalyticsPage() {
       <div className="analytics-kpi"><span>Total revenue</span><strong>{money(data.summary.totalRevenue)}</strong></div>
     </div>
 
+    // Restaurant comparison
     <section className="analytics-panel admin-comparison-panel">
       <div className="analytics-panel-heading"><div><p className="eyebrow">Restaurant comparison</p><h3>Sales and order performance</h3></div><strong className="panel-total">Top: {topRestaurant?.name || '—'}</strong></div>
       <div className="admin-restaurant-cards">{restaurants.map((restaurant) => <div className="admin-restaurant-card" key={restaurant.id}><strong>{restaurant.name}</strong><span>Total sales <b>{money(restaurant.totalSales)}</b></span><span>Total orders <b>{restaurant.totalOrders}</b></span><span>Average order value <b>{money(restaurant.averageOrderValue)}</b></span></div>)}</div>
@@ -64,16 +66,19 @@ export default function AdminAnalyticsPage() {
       <div className="admin-chart-section"><h4>Orders comparison</h4><ComparisonBars data={restaurants} valueKey="totalOrders" color="blue" /></div>
     </section>
 
+    // Weekly revenue comparison
     <section className="analytics-panel admin-revenue-panel">
       <div className="analytics-panel-heading"><div><p className="eyebrow">Weekly revenue comparison</p><h3>Last 7 days by restaurant</h3></div></div>
       <div className="admin-weekly-table">{data.weeklyRevenue.map((day) => <div className="admin-weekly-row" key={day.date}><strong>{day.label}<small>{day.date}</small></strong>{restaurants.map((restaurant) => <span key={restaurant.id}>{restaurant.name}<b>{money(day.restaurants.find((entry) => entry.restaurantId === restaurant.id)?.total)}</b></span>)}</div>)}</div>
     </section>
 
+    // Monthly revenue comparison
     <section className="analytics-panel admin-revenue-panel">
       <div className="analytics-panel-heading"><div><p className="eyebrow">Monthly revenue comparison</p><h3>Last 30 days total</h3></div><strong className="panel-total">{money(data.monthlyRevenue.reduce((sum, item) => sum + item.total, 0))}</strong></div>
       <div className="admin-monthly-bars">{data.monthlyRevenue.map((item) => <div title={`${item.date}: ${money(item.total)}`} key={item.date}><span style={{ height: `${(item.total / monthlyMax) * 100}%` }} /><small>{item.label}</small></div>)}</div>
     </section>
 
+    // Top food items and Customer registrations
     <div className="analytics-lower-grid">
       <section className="analytics-panel"><div className="analytics-panel-heading"><div><p className="eyebrow">Most popular food items</p><h3>Across all restaurants</h3></div></div>{data.topItems.map((item, index) => <div className="analytics-table-row" key={item.foodName}><span><b>{index + 1}</b>{item.foodName}</span><strong>{item.count}</strong></div>)}</section>
       <section className="analytics-panel"><div className="analytics-panel-heading"><div><p className="eyebrow">User analytics</p><h3>Customer registrations</h3></div></div><div className="admin-user-metrics"><div><span>Last 7 days</span><strong>{data.summary.newCustomers7Days ?? 0}</strong></div><div><span>Last 30 days</span><strong>{data.summary.newCustomers30Days ?? 0}</strong></div><div><span>Total customers</span><strong>{data.summary.totalCustomers ?? 0}</strong></div></div></section>

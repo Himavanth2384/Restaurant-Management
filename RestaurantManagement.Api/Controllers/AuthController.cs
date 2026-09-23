@@ -55,13 +55,17 @@ public class AuthController : ControllerBase
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
+        // Finds the user by email
         var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
+        // Checks if the user exists, if the password is correct, and if the user is active
         if (user == null || !PasswordHelper.VerifyPassword(request.Password, user.PasswordHash) || !user.IsActive)
         {
             return Unauthorized(new { message = "Invalid email or password." });
         }
 
+        // Generates a JWT token for the authenticated user
         var token = JwtHelper.GenerateToken(user, _configuration);
+        // Returns the token and Role to the frontend
         return Ok(new AuthResponse { Token = token, Role = user.Role, Name = user.Name, UserId = user.Id });
     }
 

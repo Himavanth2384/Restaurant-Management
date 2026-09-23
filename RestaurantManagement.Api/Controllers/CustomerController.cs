@@ -9,6 +9,7 @@ using System.Security.Claims;
 
 namespace RestaurantManagement.Api.Controllers;
 
+// Protects all Customer APIs - Only accessible to users with the "User" role
 [ApiController]
 [Route("api")]
 [Authorize(Roles = "User")]

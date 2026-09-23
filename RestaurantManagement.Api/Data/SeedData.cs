@@ -19,6 +19,7 @@ public static class SeedData
 
         if (!await context.Users.AnyAsync())
         {
+            // Super Admin user
             var admin = new User
             {
                 Name = "Super Admin",
@@ -32,16 +33,18 @@ public static class SeedData
             context.Users.Add(admin);
             await context.SaveChangesAsync();
 
+            // Restaurant Owners
             var ownerOne = new User { Name = "Amit Sharma", Email = "owner1@gmail.com", PasswordHash = PasswordHelper.HashPassword("Owner@123"), Phone = "8888888888", Address = "Delhi", Role = "RestaurantOwner", IsActive = true };
             var ownerTwo = new User { Name = "Neha Verma", Email = "owner2@gmail.com", PasswordHash = PasswordHelper.HashPassword("Owner@123"), Phone = "7777777777", Address = "Mumbai", Role = "RestaurantOwner", IsActive = true };
             context.Users.AddRange(ownerOne, ownerTwo);
             await context.SaveChangesAsync();
 
+            // Customer user
             var customer = new User { Name = "Ravi Kumar", Email = "user@gmail.com", PasswordHash = PasswordHelper.HashPassword("User@123"), Phone = "6666666666", Address = "Bengaluru", Role = "User", IsActive = true };
             context.Users.Add(customer);
             await context.SaveChangesAsync();
 
-            var restaurantOne = new Restaurant { Name = "Spice Hub", Description = "North Indian specialties", Address = "Connaught Place", Phone = "1111111111", Email = "spice@gmail.com", OpeningTime = "10:00", ClosingTime = "22:00", OwnerId = ownerOne.Id, Status = "Approved", IsActive = true };
+            var restaurantOne = new Restaurant { Name = "Spice Hub", Description = "North Indian specialties", Address = "Whitefield", Phone = "1111111111", Email = "spice@gmail.com", OpeningTime = "10:00", ClosingTime = "22:00", OwnerId = ownerOne.Id, Status = "Approved", IsActive = true };
             var restaurantTwo = new Restaurant { Name = "Green Leaf", Description = "Healthy vegetarian meals", Address = "Koramangala", Phone = "2222222222", Email = "green@gmail.com", OpeningTime = "11:00", ClosingTime = "23:00", OwnerId = ownerTwo.Id, Status = "Approved", IsActive = true };
             context.Restaurants.AddRange(restaurantOne, restaurantTwo);
             await context.SaveChangesAsync();
